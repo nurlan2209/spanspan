@@ -6,6 +6,7 @@ import '../models/schedule_model.dart';
 import '../utils/constants.dart';
 import 'shop_screen.dart';
 import 'profile_screen.dart';
+import 'news_feed_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const ScheduleTab(),
+    const NewsFeedScreen(),
     ShopScreen(),
     ProfileScreen(),
   ];
@@ -64,6 +66,29 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               onPressed: () => Navigator.pushNamed(context, '/create-schedule'),
             ),
+            if (user?.userType.contains('admin') == true ||
+                user?.userType.contains('trainer') == true) ...[
+              IconButton(
+                icon: const Icon(Icons.bar_chart, color: AppColors.white),
+                onPressed: () => Navigator.pushNamed(context, '/payment-stats'),
+              ),
+            ],
+            IconButton(
+              icon: const Icon(Icons.payment, color: AppColors.white),
+              onPressed: () => Navigator.pushNamed(context, '/payments'),
+            ),
+            if (user?.userType.contains('trainer') == true)
+              IconButton(
+                icon: const Icon(Icons.fact_check, color: AppColors.white),
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/mark-attendance'),
+              ),
+            
+            IconButton(
+              icon: const Icon(Icons.analytics, color: AppColors.white),
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/attendance-analytics'),
+            ),
           ],
         ],
       ),
@@ -75,6 +100,10 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: AppColors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Главная'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.article),
+            label: 'Новости',
+          ), // НОВОЕ
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_bag),
             label: 'Магазин',

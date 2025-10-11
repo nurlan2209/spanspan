@@ -13,6 +13,7 @@ const register = async (req, res) => {
       userType,
       groupId,
       password,
+      parentId, 
     } = req.body;
 
     const userExists = await User.findOne({ $or: [{ phoneNumber }, { iin }] });
@@ -20,17 +21,26 @@ const register = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    const roles = Array.isArray(userType) ? userType : [userType];
+
     const user = await User.create({
       phoneNumber,
       iin,
       fullName,
       dateOfBirth,
       weight,
-      userType,
+      userType: roles,
       password,
+      parentId: parentId || null,
     });
 
-    if (userType === "student" && groupId) {
+    if (parentId) {
+      await User.findByIdAndUpdate(parentId, {
+        $push: { children: user._id },
+      });
+    }
+
+    if (roles.includes("student") && groupId) {
       await JoinRequest.create({
         studentId: user._id,
         groupId,
@@ -49,7 +59,11 @@ const login = async (req, res) => {
   try {
     const { phoneNumber, password } = req.body;
 
-    const user = await User.findOne({ phoneNumber }).populate("groupId");
+    const user = await User.findOne({ phoneNumber })
+      .populate("groupId")
+      .populate("children", "fullName phoneNumber groupId")
+      .populate("parentId", "fullName phoneNumber");
+
     if (user && (await user.matchPassword(password))) {
       const token = generateToken(user._id);
       res.json({ user, token });

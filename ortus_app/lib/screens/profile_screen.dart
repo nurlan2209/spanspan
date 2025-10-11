@@ -80,6 +80,15 @@ class ProfileScreen extends StatelessWidget {
               );
             },
           ),
+          const SizedBox(height: 12),
+          if (user.isStudent || user.isParent)
+            CustomButton(
+              text: 'Посещаемость',
+              onPressed: () {
+                Navigator.pushNamed(context, '/attendance-analytics');
+              },
+              color: Colors.blue,
+            ),
           SizedBox(height: 12),
           CustomButton(
             text: 'Выйти',

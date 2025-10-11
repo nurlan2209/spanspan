@@ -8,16 +8,22 @@ const authRoutes = require("./routes/auth");
 const groupRoutes = require("./routes/groups");
 const userRoutes = require("./routes/users");
 const scheduleRoutes = require("./routes/schedules");
+const productRoutes = require("./routes/products");
+const cartRoutes = require("./routes/cart");
+const orderRoutes = require("./routes/orders");
+const paymentRoutes = require("./routes/payments");
+const attendanceRoutes = require("./routes/attendance");
+const newsRoutes = require("./routes/news");
+const analyticsRoutes = require("./routes/analytics"); // НОВОЕ
 
 const app = express();
 
 connectDB();
 
-// CORS ПЕРВЫМ
 app.use(
   cors({
     origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
@@ -26,7 +32,6 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Логирование запросов
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
@@ -36,9 +41,15 @@ app.use("/api/auth", authRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/schedules", scheduleRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/news", newsRoutes);
+app.use("/api/analytics", analyticsRoutes); // НОВОЕ
 
 app.get("/", (req, res) => {
-  console.log("GET / called");
   res.send("ORTUS API Running");
 });
 

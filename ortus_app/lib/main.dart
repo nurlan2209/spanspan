@@ -10,7 +10,13 @@ import 'screens/create_group_screen.dart';
 import 'screens/group_requests_screen.dart';
 import 'screens/create_schedule_screen.dart';
 import 'screens/edit_profile_screen.dart';
+import 'screens/payments_screen.dart'; // НОВОЕ
+import 'screens/payment_stats_screen.dart'; // НОВОЕ
 import 'utils/constants.dart';
+import 'screens/mark_attendance_screen.dart';
+import 'screens/news_feed_screen.dart'; // НОВОЕ
+import 'screens/news_detail_screen.dart'; // НОВОЕ
+import 'screens/create_news_screen.dart';
 
 void main() {
   runApp(
@@ -43,6 +49,9 @@ class MyApp extends StatelessWidget {
         '/group-requests': (context) => GroupRequestsScreen(),
         '/create-schedule': (context) => CreateScheduleScreen(),
         '/edit-profile': (context) => EditProfileScreen(),
+        '/payments': (context) => PaymentsScreen(),
+        '/payment-stats': (context) => PaymentStatsScreen(),
+        '/news': (context) => const NewsFeedScreen(), 
       },
     );
   }
