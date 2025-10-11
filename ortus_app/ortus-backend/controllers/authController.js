@@ -3,6 +3,11 @@ const JoinRequest = require("../models/JoinRequest");
 const generateToken = require("../utils/generateToken");
 
 const register = async (req, res) => {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  console.log("Получен запрос на регистрацию. Тело запроса:");
+  console.log(req.body);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   try {
     const {
       phoneNumber,
@@ -13,12 +18,40 @@ const register = async (req, res) => {
       userType,
       groupId,
       password,
-      parentId, 
+      parentId,
     } = req.body;
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    // Проверка на наличие обязательных полей
+    if (
+      !phoneNumber ||
+      !iin ||
+      !fullName ||
+      !dateOfBirth ||
+      !weight ||
+      !userType ||
+      !password
+    ) {
+      console.log("Ошибка: Отсутствуют обязательные поля.");
+      return res
+        .status(400)
+        .json({ message: "Пожалуйста, заполните все обязательные поля." });
+    }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     const userExists = await User.findOne({ $or: [{ phoneNumber }, { iin }] });
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      console.log(
+        "Ошибка: Пользователь с таким phoneNumber или IIN уже существует."
+      );
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+      return res
+        .status(400)
+        .json({
+          message:
+            "Пользователь с таким номером телефона или ИИН уже существует.",
+        });
     }
 
     const roles = Array.isArray(userType) ? userType : [userType];
@@ -51,6 +84,10 @@ const register = async (req, res) => {
     const token = generateToken(user._id);
     res.status(201).json({ user, token });
   } catch (error) {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    console.error("Произошла ошибка при регистрации:");
+    console.error(error);
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     res.status(500).json({ message: error.message });
   }
 };

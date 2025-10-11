@@ -1,4 +1,4 @@
-const Payment = require("../models/Payment");
+const Payment = require("../models/Payments");
 const Order = require("../models/Order");
 const User = require("../models/User");
 const Group = require("../models/Group");

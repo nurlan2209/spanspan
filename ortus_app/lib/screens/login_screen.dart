@@ -6,8 +6,10 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -21,14 +23,14 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: AppColors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               Image.asset('assets/images/logo.png', width: 200, height: 200),
-              SizedBox(height: 40),
-              Text(
+              const SizedBox(height: 40),
+              const Text(
                 'Вход в систему',
                 style: TextStyle(
                   fontSize: 28,
@@ -36,27 +38,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: AppColors.black,
                 ),
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               CustomTextField(
                 controller: _phoneController,
                 label: 'Номер телефона',
                 icon: Icons.phone,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               CustomTextField(
                 controller: _passwordController,
                 label: 'Пароль',
                 icon: Icons.lock,
                 isPassword: true,
               ),
-              SizedBox(height: 30),
-              _isLoading
-                  ? CircularProgressIndicator(color: AppColors.primary)
-                  : CustomButton(text: 'Войти', onPressed: _login),
-              SizedBox(height: 20),
+              const SizedBox(height: 30),
+              if (_isLoading)
+                const CircularProgressIndicator(color: AppColors.primary)
+              else
+                CustomButton(text: 'Войти', onPressed: _login),
+              const SizedBox(height: 20),
               TextButton(
                 onPressed: () => Navigator.pushNamed(context, '/register'),
-                child: Text(
+                child: const Text(
                   'Нет аккаунта? Зарегистрироваться',
                   style: TextStyle(color: AppColors.primary),
                 ),
@@ -68,24 +71,37 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // --- ЭТО ИСПРАВЛЕННЫЙ МЕТОД ---
   void _login() async {
     setState(() => _isLoading = true);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.login(
+
+    // 1. Получаем полный ответ (Map)
+    final result = await authProvider.login(
       _phoneController.text,
       _passwordController.text,
     );
+
     setState(() => _isLoading = false);
 
-    if (success) {
+    // 2. Проверяем ключ 'success' в ответе
+    if (result['success'] == true && mounted) {
       Navigator.pushReplacementNamed(context, '/home');
-    } else {
+    } else if (mounted) {
+      // 3. Показываем конкретную ошибку с сервера
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Неверные данные'),
-          backgroundColor: AppColors.primary,
+          content: Text(result['message'] ?? 'Неверные данные'),
+          backgroundColor: Colors.red,
         ),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

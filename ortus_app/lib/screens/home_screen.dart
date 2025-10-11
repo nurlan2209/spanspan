@@ -47,7 +47,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          if (user?.userType == 'trainer') ...[
+          // НОВАЯ КНОПКА ДЛЯ АДМИНА/ДИРЕКТОРА
+          if (user != null && (user.isAdmin || user.hasRole('director')))
+            IconButton(
+              icon: const Icon(Icons.dashboard, color: AppColors.white),
+              onPressed: () => Navigator.pushNamed(context, '/admin-dashboard'),
+            ),
+
+          if (user?.isTrainer ?? false) ...[
             IconButton(
               icon: const Icon(Icons.group_add, color: AppColors.white),
               onPressed: () => Navigator.pushNamed(context, '/create-group'),
@@ -83,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () =>
                     Navigator.pushNamed(context, '/mark-attendance'),
               ),
-            
+
             IconButton(
               icon: const Icon(Icons.analytics, color: AppColors.white),
               onPressed: () =>
@@ -100,10 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: AppColors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Главная'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.article),
-            label: 'Новости',
-          ), // НОВОЕ
+          BottomNavigationBarItem(icon: Icon(Icons.article), label: 'Новости'),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_bag),
             label: 'Магазин',

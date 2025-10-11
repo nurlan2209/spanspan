@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart'; // <-- ДОБАВЛЕН ИМПОРТ
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
@@ -15,6 +16,12 @@ class AuthService {
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
       await _saveToken(data['token']);
+
+      // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: ЛОГИРОВАНИЕ ПЕРЕД КРАШЕМ ---
+      debugPrint("----------- ДАННЫЕ С СЕРВЕРА -----------");
+      debugPrint(data['user'].toString());
+      debugPrint("---------------------------------------");
+
       return {'success': true, 'user': UserModel.fromJson(data['user'])};
     } else {
       return {

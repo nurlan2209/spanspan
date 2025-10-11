@@ -10,13 +10,16 @@ import 'screens/create_group_screen.dart';
 import 'screens/group_requests_screen.dart';
 import 'screens/create_schedule_screen.dart';
 import 'screens/edit_profile_screen.dart';
-import 'screens/payments_screen.dart'; // НОВОЕ
-import 'screens/payment_stats_screen.dart'; // НОВОЕ
+import 'screens/payments_screen.dart';
+import 'screens/payment_stats_screen.dart';
 import 'utils/constants.dart';
 import 'screens/mark_attendance_screen.dart';
-import 'screens/news_feed_screen.dart'; // НОВОЕ
-import 'screens/news_detail_screen.dart'; // НОВОЕ
+import 'screens/news_feed_screen.dart';
+import 'screens/news_detail_screen.dart';
 import 'screens/create_news_screen.dart';
+import 'screens/admin_dashboard_screen.dart';
+import 'screens/attendance_analytics_admin_screen.dart';
+import 'screens/groups_comparison_screen.dart';
 
 void main() {
   runApp(
@@ -51,7 +54,15 @@ class MyApp extends StatelessWidget {
         '/edit-profile': (context) => EditProfileScreen(),
         '/payments': (context) => PaymentsScreen(),
         '/payment-stats': (context) => PaymentStatsScreen(),
-        '/news': (context) => const NewsFeedScreen(), 
+        '/news': (context) => const NewsFeedScreen(),
+        // Убедимся, что этот маршрут тоже есть
+        '/mark-attendance': (context) => MarkAttendanceScreen(),
+
+        // НОВЫЕ МАРШРУТЫ
+        '/admin-dashboard': (context) => const AdminDashboardScreen(),
+        '/attendance-analytics-admin': (context) =>
+            const AttendanceAnalyticsAdminScreen(),
+        '/groups-comparison': (context) => const GroupComparisonScreen(),
       },
     );
   }

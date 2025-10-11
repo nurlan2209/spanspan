@@ -449,7 +449,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const GroupsComparisonScreen(),
+                builder: (context) => const GroupComparisonScreen(),
               ),
             );
           },

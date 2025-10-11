@@ -5,8 +5,11 @@ import '../models/user_model.dart';
 import 'auth_service.dart';
 
 class UserService {
-  Future<UserModel?> getProfile() async {
+  // ИСПРАВЛЕНО: Переименован метод для соответствия вызову
+  Future<UserModel?> getUserProfile() async {
     final token = await AuthService().getToken();
+    if (token == null) return null;
+
     final response = await http.get(
       Uri.parse('${ApiConfig.usersUrl}/profile'),
       headers: {'Authorization': 'Bearer $token'},
@@ -20,6 +23,8 @@ class UserService {
 
   Future<bool> updateProfile(Map<String, dynamic> data) async {
     final token = await AuthService().getToken();
+    if (token == null) return false;
+
     final response = await http.put(
       Uri.parse('${ApiConfig.usersUrl}/profile'),
       headers: {
