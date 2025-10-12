@@ -1,69 +1,38 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import '../services/user_service.dart'; // <-- Добавлен импорт
-import '../models/user_model.dart';
+import '../models/user_data.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
-  UserModel? _user;
-  String? _token;
-  String? _errorMessage;
+  UserData? _user;
 
-  UserModel? get user => _user;
-  String? get token => _token;
-  String? get errorMessage => _errorMessage;
+  UserData? get user => _user;
+  bool get isAuthenticated => _user != null;
 
-  Future<Map<String, dynamic>> register(Map<String, dynamic> userData) async {
-    _errorMessage = null;
-    final result = await _authService.register(userData);
-    if (result['success']) {
+  Future<Map<String, dynamic>> login(String phone, String password) async {
+    final result = await _authService.login(phone, password);
+    if (result['success'] == true) {
       _user = result['user'];
-      _token = await _authService.getToken();
       notifyListeners();
-    } else {
-      _errorMessage = result['message'];
     }
-    notifyListeners();
     return result;
   }
 
-  Future<Map<String, dynamic>> login(
-    String phoneNumber,
-    String password,
-  ) async {
-    _errorMessage = null;
-    final result = await _authService.login(phoneNumber, password);
-    if (result['success']) {
+  Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
+    final result = await _authService.register(data);
+    if (result['success'] == true) {
       _user = result['user'];
-      _token = await _authService.getToken();
       notifyListeners();
-    } else {
-      _errorMessage = result['message'];
     }
-    notifyListeners();
     return result;
   }
-
-  // --- НОВЫЙ МЕТОД ---
-  // Обновляет данные текущего пользователя с сервера
-  Future<void> refreshUser() async {
-    try {
-      final updatedUser = await UserService().getUserProfile();
-      if (updatedUser != null) {
-        _user = updatedUser;
-        notifyListeners();
-      }
-    } catch (e) {
-      print("Ошибка при обновлении пользователя: $e");
-      // Можно обработать ошибку, если нужно
-    }
-  }
-  // --- КОНЕЦ НОВОГО МЕТОДА ---
 
   Future<void> logout() async {
-    _user = null;
-    _token = null;
     await _authService.logout();
+    _user = null;
     notifyListeners();
   }
+
+  Future<void> refreshUser() async {}
+  Future<void> checkAuth() async {}
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/payment_service.dart';
 import '../services/user_service.dart';
 import '../services/group_service.dart';
-import '../models/user_model.dart';
+import '../models/user_data.dart';
 import '../models/group_model.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_button.dart';

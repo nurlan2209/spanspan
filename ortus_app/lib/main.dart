@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'providers/auth_provider.dart';
+import 'providers/auth_provider.dart'; // ❌ УДАЛИТЕ ЭТУ СТРОКУ
+// import 'providers/auth_provider_v2.dart'; // ✅ ОСТАВЬТЕ ТОЛЬКО ЭТУ
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -15,8 +16,8 @@ import 'screens/payment_stats_screen.dart';
 import 'utils/constants.dart';
 import 'screens/mark_attendance_screen.dart';
 import 'screens/news_feed_screen.dart';
-import 'screens/news_detail_screen.dart';
-import 'screens/create_news_screen.dart';
+// import 'screens/news_detail_screen.dart';
+// import 'screens/create_news_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'screens/attendance_analytics_admin_screen.dart';
 import 'screens/groups_comparison_screen.dart';
@@ -24,7 +25,10 @@ import 'screens/groups_comparison_screen.dart';
 void main() {
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AuthProvider())],
+      providers: [
+        // ✅ ЗАМЕНИТЕ AuthProvider на AuthProviderV2
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -55,10 +59,7 @@ class MyApp extends StatelessWidget {
         '/payments': (context) => PaymentsScreen(),
         '/payment-stats': (context) => PaymentStatsScreen(),
         '/news': (context) => const NewsFeedScreen(),
-        // Убедимся, что этот маршрут тоже есть
         '/mark-attendance': (context) => MarkAttendanceScreen(),
-
-        // НОВЫЕ МАРШРУТЫ
         '/admin-dashboard': (context) => const AdminDashboardScreen(),
         '/attendance-analytics-admin': (context) =>
             const AttendanceAnalyticsAdminScreen(),

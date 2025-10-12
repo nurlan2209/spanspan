@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/user_model.dart';
+import '../models/user_data.dart';
 import '../services/analytics_service.dart';
 import '../utils/constants.dart';
 
@@ -57,7 +57,7 @@ class _AttendanceAnalyticsAdminScreenState
           final topStudents = (analytics['topStudents'] as List)
               .map(
                 (s) => {
-                  'user': UserModel.fromJson(s['student']),
+                  'user': UserData.fromJson(s['student']),
                   'rate': s['attendanceRate'],
                 },
               )
@@ -66,7 +66,7 @@ class _AttendanceAnalyticsAdminScreenState
               (analytics['lowAttendanceStudents'] as List)
                   .map(
                     (s) => {
-                      'user': UserModel.fromJson(s['student']),
+                      'user': UserData.fromJson(s['student']),
                       'rate': s['attendanceRate'],
                     },
                   )
@@ -245,7 +245,7 @@ class _AttendanceAnalyticsAdminScreenState
                 ),
                 child: Column(
                   children: students.map((studentData) {
-                    final user = studentData['user'] as UserModel;
+                    final user = studentData['user'] as UserData;
                     final rate = (studentData['rate'] ?? 0).toDouble();
                     return ListTile(
                       leading: CircleAvatar(

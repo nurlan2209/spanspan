@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
-import '../models/user_model.dart';
+import '../models/user_data.dart'; 
 import 'auth_service.dart';
 
 class UserService {
   // ИСПРАВЛЕНО: Переименован метод для соответствия вызову
-  Future<UserModel?> getUserProfile() async {
+  Future<UserData?> getUserProfile() async {
     final token = await AuthService().getToken();
     if (token == null) return null;
 
@@ -16,7 +16,7 @@ class UserService {
     );
 
     if (response.statusCode == 200) {
-      return UserModel.fromJson(json.decode(response.body));
+      return UserData.fromJson(json.decode(response.body));
     }
     return null;
   }

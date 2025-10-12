@@ -71,12 +71,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- ЭТО ИСПРАВЛЕННЫЙ МЕТОД ---
   void _login() async {
+    debugPrint('🚀🚀🚀 КНОПКА ВОЙТИ НАЖАТА 🚀🚀🚀');
+
     setState(() => _isLoading = true);
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // 1. Получаем полный ответ (Map)
     final result = await authProvider.login(
       _phoneController.text,
       _passwordController.text,
@@ -84,11 +85,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = false);
 
-    // 2. Проверяем ключ 'success' в ответе
+    debugPrint('📊 Результат: $result');
+
     if (result['success'] == true && mounted) {
+      debugPrint('✅ Переход на /home');
       Navigator.pushReplacementNamed(context, '/home');
     } else if (mounted) {
-      // 3. Показываем конкретную ошибку с сервера
+      debugPrint('❌ Показываем ошибку: ${result['message']}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Неверные данные'),
