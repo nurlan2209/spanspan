@@ -36,15 +36,20 @@ const createProduct = async (req, res) => {
         .json({ message: "Only admins can create products" });
     }
 
-    const { name, description, category, price, images, sizes } = req.body;
+    const { name, description, category, price, sizes } = req.body;
+
+    // Формируем URLs изображений
+    const images = req.files
+      ? req.files.map((file) => `/uploads/products/${file.filename}`)
+      : [];
 
     const product = await Product.create({
       name,
       description,
       category,
-      price,
-      images: images || [],
-      sizes: sizes || [],
+      price: parseFloat(price),
+      images,
+      sizes: sizes ? JSON.parse(sizes) : [],
     });
 
     res.status(201).json(product);

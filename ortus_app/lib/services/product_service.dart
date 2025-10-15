@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/product_model.dart';
 import 'auth_service.dart';
+import 'dart:io';
 
 class ProductService {
   Future<List<ProductModel>> getAllProducts({String? category}) async {
@@ -30,18 +31,34 @@ class ProductService {
     return null;
   }
 
-  Future<bool> createProduct(Map<String, dynamic> productData) async {
+  Future<void> createProduct({
+    required String name,
+    required String description,
+    required String category,
+    required double price,
+    required List<File> images,
+  }) async {
     final token = await AuthService().getToken();
-    final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/products'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode(productData),
-    );
+    final url = Uri.parse('${ApiConfig.baseUrl}/products');
+    final request = http.MultipartRequest('POST', url);
 
-    return response.statusCode == 201;
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['name'] = name;
+    request.fields['description'] = description;
+    request.fields['category'] = category;
+    request.fields['price'] = price.toString();
+
+    for (var image in images) {
+      request.files.add(
+        await http.MultipartFile.fromPath('images', image.path),
+      );
+    }
+
+    final response = await request.send();
+
+    if (response.statusCode != 201) {
+      throw Exception('Failed to create product');
+    }
   }
 
   Future<bool> updateProduct(

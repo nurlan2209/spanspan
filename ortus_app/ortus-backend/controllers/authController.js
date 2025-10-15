@@ -35,6 +35,15 @@ const register = async (req, res) => {
         .json({ message: "Пожалуйста, заполните все обязательные поля." });
     }
 
+    const roles = Array.isArray(userType) ? userType : [userType];
+
+    if (roles.some((role) => ["trainer", "admin", "director"].includes(role))) {
+      return res.status(403).json({
+        message:
+          "Регистрация тренеров и администраторов запрещена. Обратитесь к директору.",
+      });
+    }
+
     const userExists = await User.findOne({ $or: [{ phoneNumber }, { iin }] });
     if (userExists) {
       console.log(
@@ -45,8 +54,6 @@ const register = async (req, res) => {
           "Пользователь с таким номером телефона или ИИН уже существует.",
       });
     }
-
-    const roles = Array.isArray(userType) ? userType : [userType];
 
     const user = await User.create({
       phoneNumber,

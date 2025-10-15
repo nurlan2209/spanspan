@@ -21,6 +21,38 @@ class UserService {
     return null;
   }
 
+  Future<void> createUser({
+    required String phoneNumber,
+    required String iin,
+    required String fullName,
+    required DateTime dateOfBirth,
+    required double weight,
+    required String userType,
+    required String password,
+  }) async {
+    final token = await AuthService().getToken();
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/users/create-user'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'phoneNumber': phoneNumber,
+        'iin': iin,
+        'fullName': fullName,
+        'dateOfBirth': dateOfBirth.toIso8601String(),
+        'weight': weight,
+        'userType': userType,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception('Failed to create user');
+    }
+  }
+
   Future<bool> updateProfile(Map<String, dynamic> data) async {
     final token = await AuthService().getToken();
     if (token == null) return false;

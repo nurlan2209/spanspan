@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/analytics_service.dart';
 import '../utils/constants.dart';
 import 'financial_analytics_screen.dart';
+import '../providers/auth_provider.dart';
+import 'package:provider/provider.dart';
 import 'attendance_analytics_admin_screen.dart';
 import 'groups_comparison_screen.dart';
 
@@ -408,8 +410,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildAnalyticsButtons() {
+    final user = context.watch<AuthProvider>().user;
     return Column(
       children: [
+        if (Provider.of<AuthProvider>(
+              context,
+              listen: false,
+            ).user?.hasRole('director') ==
+            true) ...[
+          _buildAnalyticsButton(
+            'Создать аккаунт',
+            'Тренер или администратор',
+            Icons.person_add,
+            Colors.indigo,
+            () => Navigator.pushNamed(context, '/create-user'),
+          ),
+          const SizedBox(height: 12),
+        ],
+        _buildAnalyticsButton(
+          'Управление товарами',
+          'Добавить товар в магазин',
+          Icons.add_shopping_cart,
+          Colors.purple,
+          () => Navigator.pushNamed(context, '/create-product'),
+        ),
+        const SizedBox(height: 12),
         _buildAnalyticsButton(
           'Финансовая аналитика',
           'Доходы, расходы, тренды',

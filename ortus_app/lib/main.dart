@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart'; // ❌ УДАЛИТЕ ЭТУ СТРОКУ
 // import 'providers/auth_provider_v2.dart'; // ✅ ОСТАВЬТЕ ТОЛЬКО ЭТУ
 import 'screens/splash_screen.dart';
+import 'screens/create_product_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
@@ -21,6 +22,7 @@ import 'screens/news_feed_screen.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'screens/attendance_analytics_admin_screen.dart';
 import 'screens/groups_comparison_screen.dart';
+import 'screens/create_user_screen.dart';
 
 void main() {
   runApp(
@@ -64,6 +66,8 @@ class MyApp extends StatelessWidget {
         '/attendance-analytics-admin': (context) =>
             const AttendanceAnalyticsAdminScreen(),
         '/groups-comparison': (context) => const GroupComparisonScreen(),
+        '/create-product': (context) => const CreateProductScreen(),
+        '/create-user': (context) => const CreateUserScreen(),
       },
     );
   }

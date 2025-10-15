@@ -13,6 +13,48 @@ const getProfile = async (req, res) => {
   }
 };
 
+const createUserByDirector = async (req, res) => {
+  try {
+    if (!req.user.userType.includes("director")) {
+      return res
+        .status(403)
+        .json({ message: "Only directors can create users" });
+    }
+
+    const {
+      phoneNumber,
+      iin,
+      fullName,
+      dateOfBirth,
+      weight,
+      userType,
+      password,
+    } = req.body;
+
+    const userExists = await User.findOne({ $or: [{ phoneNumber }, { iin }] });
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const user = await User.create({
+      phoneNumber,
+      iin,
+      fullName,
+      dateOfBirth,
+      weight,
+      userType: Array.isArray(userType) ? userType : [userType],
+      password,
+    });
+
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    res.status(201).json(userObject);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const updateProfile = async (req, res) => {
   try {
     const { weight, groupId } = req.body;
@@ -55,4 +97,4 @@ const addChild = async (req, res) => {
   }
 };
 
-module.exports = { getProfile, updateProfile, addChild };
+module.exports = { getProfile, updateProfile, addChild, createUserByDirector };

@@ -32,6 +32,8 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+const path = require("path");
+
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
@@ -48,6 +50,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/analytics", analyticsRoutes); 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {
   res.send("ORTUS API Running");
