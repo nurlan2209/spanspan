@@ -47,7 +47,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/news", newsRoutes);
-app.use("/api/analytics", analyticsRoutes); // НОВОЕ
+app.use("/api/analytics", analyticsRoutes); 
 
 app.get("/", (req, res) => {
   res.send("ORTUS API Running");
