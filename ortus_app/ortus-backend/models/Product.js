@@ -5,8 +5,8 @@ const productSchema = new mongoose.Schema({
   description: { type: String, required: true },
   category: {
     type: String,
-    enum: ["merch", "equipment", "accessories"],
     required: true,
+    enum: ["tshirt", "patch", "bottle", "mug", "cap"], // ✅ ДОБАВИТЬ ВСЕ ТИПЫ
   },
   price: { type: Number, required: true },
   images: [{ type: String }], // массив URL изображений

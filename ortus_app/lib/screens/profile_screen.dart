@@ -37,21 +37,25 @@ class ProfileScreen extends StatelessWidget {
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 8),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: user.userType == 'trainer'
-                  ? Colors.orange
-                  : AppColors.primary,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              user.userType == 'student' ? 'Ученик' : 'Тренер',
-              style: TextStyle(
-                color: AppColors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          // ✅ ИСПРАВЛЕНО: показываем все роли
+          Wrap(
+            spacing: 8,
+            children: user.userType.map((role) {
+              return Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getRoleColor(role),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _getRoleLabel(role),
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            }).toList(),
           ),
           SizedBox(height: 30),
           _buildInfoCard([
@@ -101,6 +105,42 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // ✅ ДОБАВЛЕНО: метод для определения цвета роли
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case 'director':
+        return Colors.purple;
+      case 'admin':
+        return Colors.red;
+      case 'trainer':
+        return Colors.orange;
+      case 'student':
+        return AppColors.primary;
+      case 'parent':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // ✅ ДОБАВЛЕНО: метод для текста роли
+  String _getRoleLabel(String role) {
+    switch (role) {
+      case 'director':
+        return 'Директор';
+      case 'admin':
+        return 'Администратор';
+      case 'trainer':
+        return 'Тренер';
+      case 'student':
+        return 'Ученик';
+      case 'parent':
+        return 'Родитель';
+      default:
+        return role;
+    }
   }
 
   Widget _buildInfoCard(List<Widget> children) {

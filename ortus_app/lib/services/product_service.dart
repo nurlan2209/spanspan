@@ -31,36 +31,53 @@ class ProductService {
     return null;
   }
 
-  Future<void> createProduct({
+ Future<void> createProduct({
     required String name,
     required String description,
     required String category,
     required double price,
     required List<File> images,
   }) async {
-    final token = await AuthService().getToken();
-    final url = Uri.parse('${ApiConfig.baseUrl}/products');
-    final request = http.MultipartRequest('POST', url);
+    try {
+      final token = await AuthService().getToken();
+      print('🔑 Token: $token');
 
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['name'] = name;
-    request.fields['description'] = description;
-    request.fields['category'] = category;
-    request.fields['price'] = price.toString();
+      final url = Uri.parse('${ApiConfig.baseUrl}/products');
+      print('🌐 URL: $url');
 
-    for (var image in images) {
-      request.files.add(
-        await http.MultipartFile.fromPath('images', image.path),
-      );
-    }
+      final request = http.MultipartRequest('POST', url);
 
-    final response = await request.send();
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['name'] = name;
+      request.fields['description'] = description;
+      request.fields['category'] = category;
+      request.fields['price'] = price.toString();
 
-    if (response.statusCode != 201) {
-      throw Exception('Failed to create product');
+      print('📦 Fields: ${request.fields}');
+
+      for (var image in images) {
+        request.files.add(
+          await http.MultipartFile.fromPath('images', image.path),
+        );
+        print('📸 Added image: ${image.path}');
+      }
+
+      print('🚀 Sending request...');
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      print('📥 Status: ${response.statusCode}');
+      print('📥 Response: $responseBody');
+
+      if (response.statusCode != 201) {
+        throw Exception('Server error: $responseBody');
+      }
+    } catch (e) {
+      print('❌ Error in createProduct: $e');
+      rethrow;
     }
   }
-
+  
   Future<bool> updateProduct(
     String id,
     Map<String, dynamic> productData,

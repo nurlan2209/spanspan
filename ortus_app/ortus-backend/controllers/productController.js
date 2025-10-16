@@ -30,18 +30,20 @@ const getProductById = async (req, res) => {
 // Создать товар (только admin)
 const createProduct = async (req, res) => {
   try {
-    if (!req.user.userType.includes("admin")) {
+    // ✅ РАЗРЕШИТЬ И DIRECTOR
+    if (
+      !req.user.userType.includes("admin") &&
+      !req.user.userType.includes("director")
+    ) {
       return res
         .status(403)
-        .json({ message: "Only admins can create products" });
+        .json({ message: "Only admins/directors can create products" });
     }
 
-    const { name, description, category, price, sizes } = req.body;
+    const { name, description, category, price } = req.body;
 
-    // Формируем URLs изображений
-    const images = req.files
-      ? req.files.map((file) => `/uploads/products/${file.filename}`)
-      : [];
+    // ✅ ПОЛУЧАЕМ URLS ИЗ CLOUDINARY
+    const images = req.files ? req.files.map((file) => file.path) : [];
 
     const product = await Product.create({
       name,
@@ -49,11 +51,12 @@ const createProduct = async (req, res) => {
       category,
       price: parseFloat(price),
       images,
-      sizes: sizes ? JSON.parse(sizes) : [],
+      sizes: [],
     });
 
     res.status(201).json(product);
   } catch (error) {
+    console.error("❌ Create product error:", error);
     res.status(500).json({ message: error.message });
   }
 };
