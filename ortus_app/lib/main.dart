@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart'; // ❌ УДАЛИТЕ ЭТУ СТРОКУ
 // import 'providers/auth_provider_v2.dart'; // ✅ ОСТАВЬТЕ ТОЛЬКО ЭТУ
 import 'screens/splash_screen.dart';
-import 'screens/create_product_screen.dart';
+import 'screens/manage_products_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
@@ -66,7 +66,7 @@ class MyApp extends StatelessWidget {
         '/attendance-analytics-admin': (context) =>
             const AttendanceAnalyticsAdminScreen(),
         '/groups-comparison': (context) => const GroupComparisonScreen(),
-        '/create-product': (context) => const CreateProductScreen(),
+        '/manage-products': (context) => const ManageProductsScreen(),
         '/create-user': (context) => const CreateUserScreen(),
       },
     );

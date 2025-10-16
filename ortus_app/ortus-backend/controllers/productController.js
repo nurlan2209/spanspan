@@ -113,7 +113,10 @@ const deleteProduct = async (req, res) => {
 // Обновить остатки размера (только admin)
 const updateStock = async (req, res) => {
   try {
-    if (!req.user.userType.includes("admin")) {
+    if (
+      !req.user.userType.includes("admin") &&
+      !req.user.userType.includes("director")
+    ) {
       return res.status(403).json({ message: "Only admins can update stock" });
     }
 
@@ -124,16 +127,21 @@ const updateStock = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    // ✅ НАЙТИ ИЛИ СОЗДАТЬ РАЗМЕР
     const sizeIndex = product.sizes.findIndex((s) => s.size === size);
+
     if (sizeIndex === -1) {
-      return res.status(404).json({ message: "Size not found" });
+      // Размер не найден - добавляем новый
+      product.sizes.push({ size, stock });
+    } else {
+      // Размер найден - обновляем
+      product.sizes[sizeIndex].stock = stock;
     }
 
-    product.sizes[sizeIndex].stock = stock;
     await product.save();
-
     res.json(product);
   } catch (error) {
+    console.error("❌ Update stock error:", error);
     res.status(500).json({ message: error.message });
   }
 };

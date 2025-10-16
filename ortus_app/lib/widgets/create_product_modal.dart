@@ -1,23 +1,23 @@
-// lib/screens/create_product_screen.dart (исправленная версия)
+// lib/widgets/create_product_modal.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/product_service.dart';
 import '../utils/constants.dart';
-import '../widgets/custom_button.dart';
 
-class CreateProductScreen extends StatefulWidget {
-  const CreateProductScreen({super.key});
+class CreateProductModal extends StatefulWidget {
+  final VoidCallback onCreated;
+
+  const CreateProductModal({super.key, required this.onCreated});
 
   @override
-  State<CreateProductScreen> createState() => _CreateProductScreenState();
+  State<CreateProductModal> createState() => _CreateProductModalState();
 }
 
-class _CreateProductScreenState extends State<CreateProductScreen> {
+class _CreateProductModalState extends State<CreateProductModal> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-
   String _selectedCategory = 'tshirt';
   final List<File> _images = [];
   bool _isLoading = false;
@@ -49,10 +49,9 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
 
   Future<void> _createProduct() async {
     if (_nameController.text.isEmpty || _priceController.text.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Заполните все поля')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Заполните название и цену')),
+      );
       return;
     }
 
@@ -68,10 +67,11 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
       );
 
       if (!mounted) return;
+      Navigator.pop(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Товар создан успешно')));
-      Navigator.pop(context);
+      ).showSnackBar(const SnackBar(content: Text('Товар создан')));
+      widget.onCreated();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -84,86 +84,90 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.black,
-        title: const Text(
-          'Создать товар',
-          style: TextStyle(color: AppColors.white),
-        ),
-        iconTheme: const IconThemeData(color: AppColors.white),
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: SingleChildScrollView(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Новый товар',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
                 labelText: 'Название',
-                prefixIcon: const Icon(Icons.shopping_bag),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             TextField(
               controller: _descriptionController,
               decoration: InputDecoration(
                 labelText: 'Описание',
-                prefixIcon: const Icon(Icons.description),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              maxLines: 3,
+              maxLines: 2,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             TextField(
               controller: _priceController,
               decoration: InputDecoration(
                 labelText: 'Цена (₸)',
-                prefixIcon: const Icon(Icons.money),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'Тип товара',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: _selectedCategory,
               decoration: InputDecoration(
+                labelText: 'Тип',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
               ),
-              items: categories.entries.map((entry) {
-                return DropdownMenuItem(
-                  value: entry.key,
-                  child: Text(entry.value),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() => _selectedCategory = value!);
-              },
+              items: categories.entries
+                  .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedCategory = v!),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Фото товара',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  'Фото',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 TextButton.icon(
                   onPressed: _pickImages,
@@ -172,10 +176,9 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
             if (_images.isNotEmpty)
               SizedBox(
-                height: 100,
+                height: 80,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: _images.length,
@@ -188,18 +191,17 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                             borderRadius: BorderRadius.circular(8),
                             child: Image.file(
                               _images[index],
-                              width: 100,
-                              height: 100,
+                              width: 80,
+                              height: 80,
                               fit: BoxFit.cover,
                             ),
                           ),
                           Positioned(
-                            top: 4,
-                            right: 4,
+                            top: 2,
+                            right: 2,
                             child: GestureDetector(
-                              onTap: () {
-                                setState(() => _images.removeAt(index));
-                              },
+                              onTap: () =>
+                                  setState(() => _images.removeAt(index)),
                               child: Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: const BoxDecoration(
@@ -209,7 +211,7 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                                 child: const Icon(
                                   Icons.close,
                                   color: Colors.white,
-                                  size: 16,
+                                  size: 14,
                                 ),
                               ),
                             ),
@@ -220,13 +222,33 @@ class _CreateProductScreenState extends State<CreateProductScreen> {
                   },
                 ),
               ),
-            const SizedBox(height: 32),
-            if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              )
-            else
-              CustomButton(text: 'Создать товар', onPressed: _createProduct),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _createProduct,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: AppColors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Создать',
+                        style: TextStyle(fontSize: 16, color: AppColors.white),
+                      ),
+              ),
+            ),
           ],
         ),
       ),

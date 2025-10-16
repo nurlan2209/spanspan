@@ -432,7 +432,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           'Добавить товар в магазин',
           Icons.add_shopping_cart,
           Colors.purple,
-          () => Navigator.pushNamed(context, '/create-product'),
+          () => Navigator.pushNamed(context, '/manage-products'),
         ),
         const SizedBox(height: 12),
         _buildAnalyticsButton(

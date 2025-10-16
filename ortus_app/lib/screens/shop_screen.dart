@@ -18,9 +18,11 @@ class _ShopScreenState extends State<ShopScreen> {
 
   final categories = {
     null: 'Всё',
-    'merch': 'Мерч',
-    'equipment': 'Экипировка',
-    'accessories': 'Аксессуары',
+    'tshirt': 'Футболки',
+    'patch': 'Нашивки',
+    'bottle': 'Бутылки',
+    'mug': 'Кружки',
+    'cap': 'Кепки',
   };
 
   @override
@@ -41,10 +43,14 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Магазин ORTUS'),
+        backgroundColor: AppColors.black,
+        title: const Text(
+          'Магазин ORTUS',
+          style: TextStyle(color: AppColors.white),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.shopping_cart),
+            icon: const Icon(Icons.shopping_cart, color: AppColors.white),
             onPressed: () {
               Navigator.push(
                 context,
@@ -75,7 +81,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         Icon(
                           Icons.shopping_bag_outlined,
                           size: 80,
-                          color: AppColors.grey,
+                          color: AppColors.grey.withOpacity(0.5),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -91,9 +97,9 @@ class _ShopScreenState extends State<ShopScreen> {
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.65,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
                   ),
                   itemCount: snapshot.data!.length,
                   itemBuilder: (context, index) {
@@ -111,16 +117,16 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Widget _buildCategoryFilter() {
     return Container(
-      height: 50,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      height: 60,
+      margin: const EdgeInsets.symmetric(vertical: 12),
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: categories.entries.map((entry) {
           final isSelected = _selectedCategory == entry.key;
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
+            padding: const EdgeInsets.only(right: 12),
+            child: ChoiceChip(
               label: Text(entry.value),
               selected: isSelected,
               onSelected: (_) {
@@ -129,12 +135,14 @@ class _ShopScreenState extends State<ShopScreen> {
                   _loadProducts();
                 });
               },
-              backgroundColor: AppColors.white,
+              backgroundColor: Colors.grey.shade200,
               selectedColor: AppColors.primary,
               labelStyle: TextStyle(
                 color: isSelected ? AppColors.white : AppColors.black,
                 fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           );
         }).toList(),
@@ -153,80 +161,119 @@ class _ShopScreenState extends State<ShopScreen> {
         );
       },
       child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
+              flex: 3,
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppColors.grey.withOpacity(0.1),
+                  color: Colors.grey.shade100,
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
+                    top: Radius.circular(16),
                   ),
                 ),
                 child: product.images.isNotEmpty
                     ? ClipRRect(
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(12),
+                          top: Radius.circular(16),
                         ),
                         child: Image.network(
                           product.images[0],
                           fit: BoxFit.cover,
                           width: double.infinity,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                    : null,
+                                color: AppColors.primary,
+                              ),
+                            );
+                          },
                           errorBuilder: (context, error, stackTrace) {
-                            return const Center(
-                              child: Icon(Icons.image_not_supported, size: 50),
+                            return Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 40,
+                                color: AppColors.grey,
+                              ),
                             );
                           },
                         ),
                       )
-                    : const Center(child: Icon(Icons.shopping_bag, size: 50)),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${product.price.toStringAsFixed(0)} ₸',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        product.inStock ? Icons.check_circle : Icons.cancel,
-                        size: 14,
-                        color: product.inStock ? Colors.green : Colors.red,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        product.inStock ? 'В наличии' : 'Нет в наличии',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: product.inStock ? Colors.green : Colors.red,
+                    : Center(
+                        child: Icon(
+                          Icons.shopping_bag,
+                          size: 50,
+                          color: AppColors.grey,
                         ),
                       ),
-                    ],
-                  ),
-                ],
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      product.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${product.price.toStringAsFixed(0)} ₸',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              product.inStock
+                                  ? Icons.check_circle
+                                  : Icons.cancel,
+                              size: 14,
+                              color: product.inStock
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              product.inStock ? 'В наличии' : 'Нет в наличии',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: product.inStock
+                                    ? Colors.green
+                                    : Colors.red,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
