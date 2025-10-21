@@ -110,35 +110,53 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-// Обновить остатки размера (только admin)
 const updateStock = async (req, res) => {
   try {
+    console.log("📦 updateStock вызван");
+    console.log("Product ID:", req.params.id);
+    console.log("Body:", req.body);
+    console.log("User:", req.user.userType);
+
     if (
       !req.user.userType.includes("admin") &&
       !req.user.userType.includes("director")
     ) {
+      console.log("❌ Access denied");
       return res.status(403).json({ message: "Only admins can update stock" });
     }
 
     const { size, stock } = req.body;
+
+    if (!size || stock === undefined) {
+      console.log("❌ Missing size or stock");
+      return res.status(400).json({ message: "Size and stock are required" });
+    }
+
     const product = await Product.findById(req.params.id);
 
     if (!product) {
+      console.log("❌ Product not found");
       return res.status(404).json({ message: "Product not found" });
     }
+
+    console.log("✅ Product found:", product.name);
+    console.log("Current sizes:", product.sizes);
 
     // ✅ НАЙТИ ИЛИ СОЗДАТЬ РАЗМЕР
     const sizeIndex = product.sizes.findIndex((s) => s.size === size);
 
     if (sizeIndex === -1) {
-      // Размер не найден - добавляем новый
+      console.log("➕ Adding new size:", size);
       product.sizes.push({ size, stock });
     } else {
-      // Размер найден - обновляем
+      console.log("✏️ Updating existing size:", size);
       product.sizes[sizeIndex].stock = stock;
     }
 
     await product.save();
+    console.log("✅ Product saved");
+    console.log("New sizes:", product.sizes);
+
     res.json(product);
   } catch (error) {
     console.error("❌ Update stock error:", error);

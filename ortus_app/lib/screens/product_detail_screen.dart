@@ -66,8 +66,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 24),
                   _buildSizeSelector(),
-                  const SizedBox(height: 24),
-                  _buildQuantitySelector(),
+                  if (_selectedSize != null) ...[
+                    const SizedBox(height: 24),
+                    _buildQuantitySelector(),
+                  ],
                   const SizedBox(height: 32),
                   Center(
                     child: CustomButton(
@@ -195,9 +197,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   void _addToCart() async {
     if (_selectedSize == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Выберите размер')));
+      // Показываем модальное окно выбора размера
+      _showSizeSelectionModal();
       return;
     }
 
@@ -220,5 +221,71 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         const SnackBar(content: Text('Ошибка добавления в корзину')),
       );
     }
+  }
+
+  void _showSizeSelectionModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Выберите размер',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: widget.product.sizes.map((sizeData) {
+                final isAvailable = sizeData.stock > 0;
+                return ChoiceChip(
+                  label: Text('${sizeData.size} (${sizeData.stock})'),
+                  selected: false,
+                  onSelected: isAvailable
+                      ? (selected) {
+                          setState(() {
+                            _selectedSize = sizeData.size;
+                            _quantity = 1;
+                          });
+                          Navigator.pop(context);
+                          // Автоматически добавляем в корзину после выбора
+                          _addToCart();
+                        }
+                      : null,
+                  backgroundColor: isAvailable
+                      ? AppColors.white
+                      : AppColors.grey.withOpacity(0.3),
+                  selectedColor: AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: isAvailable ? AppColors.black : AppColors.grey,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  disabledColor: AppColors.grey.withOpacity(0.3),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 }
