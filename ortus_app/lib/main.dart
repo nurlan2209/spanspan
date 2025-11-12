@@ -5,7 +5,6 @@ import 'providers/auth_provider.dart'; // ❌ УДАЛИТЕ ЭТУ СТРОКУ
 import 'screens/splash_screen.dart';
 import 'screens/manage_products_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/create_group_screen.dart';
 import 'screens/group_requests_screen.dart';
@@ -26,6 +25,7 @@ import 'screens/photo_reports/photo_report_screen.dart';
 import 'screens/photo_reports/photo_reports_gallery_screen.dart';
 import 'screens/cleaning/cleaning_report_screen.dart';
 import 'screens/cleaning/cleaning_history_screen.dart';
+import 'screens/manager/create_student_screen.dart';
 
 void main() {
   runApp(
@@ -54,7 +54,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => SplashScreen(),
         '/login': (context) => LoginScreen(),
-        '/register': (context) => RegisterScreen(),
         '/home': (context) => const AppNavigator(),
         '/app': (context) => const AppNavigator(),
         '/profile': (context) => ProfileScreen(),
@@ -71,6 +70,7 @@ class MyApp extends StatelessWidget {
         '/manage-products': (context) => const ManageProductsScreen(),
         '/create-user': (context) => const CreateUserScreen(),
         '/pending-students': (context) => const PendingStudentsScreen(),
+        '/create-student': (context) => const CreateStudentScreen(),
         '/photo-report': (context) => const PhotoReportScreen(),
         '/photo-reports-gallery': (context) =>
             const PhotoReportsGalleryScreen(),

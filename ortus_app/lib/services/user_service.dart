@@ -237,4 +237,39 @@ class UserService {
 
     return response.statusCode == 200;
   }
+
+  Future<void> createStudentByManager({
+    required String role,
+    required String phoneNumber,
+    required String iin,
+    required String fullName,
+    required String password,
+    required DateTime dateOfBirth,
+    required double weight,
+    String? groupId,
+  }) async {
+    final token = await AuthService().getToken();
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/users/create-student'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'phoneNumber': phoneNumber,
+        'iin': iin,
+        'fullName': fullName,
+        'password': password,
+        'dateOfBirth': dateOfBirth.toIso8601String(),
+        'weight': weight,
+        'userType': role,
+        'groupId': groupId,
+      }),
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception(json.decode(response.body)['message'] ??
+          'Failed to create student');
+    }
+  }
 }

@@ -14,7 +14,6 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  String _userType = 'student';
   final _phoneController = TextEditingController();
   final _iinController = TextEditingController();
   final _nameController = TextEditingController();
@@ -42,25 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           key: _formKey,
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Ученик', style: TextStyle(fontSize: 16)),
-                  Switch(
-                    value: _userType == 'student',
-                    onChanged: (value) {
-                      setState(() {
-                        _userType = value ? 'student' : 'trainer';
-                        _selectedGroupId =
-                            null; // Сбрасываем группу при смене роли
-                      });
-                    },
-                    activeColor: AppColors.primary,
-                  ),
-                  const Text('Тренер', style: TextStyle(fontSize: 16)),
-                ],
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(labelText: 'Номер телефона'),
@@ -116,29 +97,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 onChanged: (value) => setState(() => _weight = value),
                 activeColor: AppColors.primary,
               ),
-              if (_userType == 'student')
-                FutureBuilder<List<GroupModel>>(
-                  future: GroupService().getAllGroups(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const SizedBox.shrink();
-                    }
-                    return DropdownButtonFormField<String>(
-                      value: _selectedGroupId,
-                      hint: const Text('Выберите группу (необязательно)'),
-                      onChanged: (value) =>
-                          setState(() => _selectedGroupId = value),
-                      items: snapshot.data!
-                          .map(
-                            (group) => DropdownMenuItem(
-                              value: group.id,
-                              child: Text(group.name),
-                            ),
-                          )
-                          .toList(),
-                    );
-                  },
-                ),
+              FutureBuilder<List<GroupModel>>(
+                future: GroupService().getAllGroups(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+                  return DropdownButtonFormField<String>(
+                    value: _selectedGroupId,
+                    hint: const Text('Выберите группу (необязательно)'),
+                    onChanged: (value) =>
+                        setState(() => _selectedGroupId = value),
+                    items: snapshot.data!
+                        .map(
+                          (group) => DropdownMenuItem(
+                            value: group.id,
+                            child: Text(group.name),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+              ),
               const SizedBox(height: 30),
               if (_isLoading)
                 const CircularProgressIndicator(color: AppColors.primary)
@@ -186,7 +166,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'password': _passwordController.text,
         'dateOfBirth': _dateOfBirth!.toIso8601String(),
         'weight': _weight,
-        'userType': _userType,
+        'userType': 'student',
         'groupId': _selectedGroupId,
       });
 

@@ -173,6 +173,12 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
         title: const Text('Новые студенты'),
         backgroundColor: AppColors.black,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add),
+            onPressed: () =>
+                Navigator.pushNamed(context, '/create-student')
+                    .then((_) => _loadStudents()),
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
         ],
       ),

@@ -204,6 +204,60 @@ const assignStudentToGroup = async (req, res) => {
   }
 };
 
+const createStudentByManager = async (req, res) => {
+  try {
+    if (!req.user.userType.includes("manager")) {
+      return res
+        .status(403)
+        .json({ message: "Only managers can create students or parents" });
+    }
+
+    const {
+      phoneNumber,
+      iin,
+      fullName,
+      dateOfBirth,
+      weight,
+      userType,
+      password,
+      groupId,
+    } = req.body;
+
+    if (!["student", "parent"].includes(userType)) {
+      return res
+        .status(400)
+        .json({ message: "Managers can create only students or parents" });
+    }
+
+    const userExists = await User.findOne({ $or: [{ phoneNumber }, { iin }] });
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    const status =
+      userType === "student" ? (groupId ? "active" : "pending") : "active";
+
+    const user = await User.create({
+      phoneNumber,
+      iin,
+      fullName,
+      dateOfBirth,
+      weight,
+      userType: [userType],
+      status,
+      password,
+      groupId: userType === "student" ? groupId || null : null,
+    });
+
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    res.status(201).json(userObject);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getAllStudents = async (req, res) => {
   try {
     const canView =
@@ -327,6 +381,7 @@ module.exports = {
   createUserByDirector,
   getPendingStudents,
   assignStudentToGroup,
+  createStudentByManager,
   getAllStudents,
   getStaff,
   updateUserStatus,

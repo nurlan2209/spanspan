@@ -56,14 +56,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 const CircularProgressIndicator(color: AppColors.primary)
               else
                 CustomButton(text: 'Войти', onPressed: _login),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/register'),
-                child: const Text(
-                  'Нет аккаунта? Зарегистрироваться',
-                  style: TextStyle(color: AppColors.primary),
-                ),
-              ),
             ],
           ),
         ),
