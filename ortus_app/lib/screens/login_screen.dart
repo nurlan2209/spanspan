@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (result['success'] == true && mounted) {
       debugPrint('✅ Переход на /home');
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/app');
     } else if (mounted) {
       debugPrint('❌ Показываем ошибку: ${result['message']}');
       ScaffoldMessenger.of(context).showSnackBar(

@@ -37,10 +37,14 @@ const register = async (req, res) => {
 
     const roles = Array.isArray(userType) ? userType : [userType];
 
-    if (roles.some((role) => ["trainer", "admin", "director"].includes(role))) {
+    if (
+      roles.some((role) =>
+        ["trainer", "admin", "director", "manager", "tech_staff"].includes(role)
+      )
+    ) {
       return res.status(403).json({
         message:
-          "Регистрация тренеров и администраторов запрещена. Обратитесь к директору.",
+          "Регистрация сотрудников запрещена. Обратитесь к директору.",
       });
     }
 
@@ -55,6 +59,7 @@ const register = async (req, res) => {
       });
     }
 
+    const isStudent = roles.includes("student");
     const user = await User.create({
       phoneNumber,
       iin,
@@ -62,6 +67,7 @@ const register = async (req, res) => {
       dateOfBirth,
       weight,
       userType: roles,
+      status: isStudent ? (groupId ? "active" : "pending") : "active",
       password,
       parentId: parentId || null,
     });

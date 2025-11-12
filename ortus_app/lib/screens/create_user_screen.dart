@@ -22,7 +22,12 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
   String _selectedRole = 'trainer';
   bool _isLoading = false;
 
-  final roles = {'trainer': 'Тренер', 'admin': 'Администратор'};
+  final roles = const {
+    'trainer': 'Тренер',
+    'manager': 'Менеджер',
+    'tech_staff': 'Техничка',
+    'admin': 'Администратор',
+  };
 
   Future<void> _createUser() async {
     if (!_formKey.currentState!.validate() || _dateOfBirth == null) {

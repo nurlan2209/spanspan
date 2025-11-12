@@ -2,6 +2,7 @@ class NewsModel {
   final String id;
   final String title;
   final String content;
+  final String newsType;
   final String category;
   final List<String> images;
   final List<String> targetGroupIds;
@@ -18,6 +19,7 @@ class NewsModel {
     required this.id,
     required this.title,
     required this.content,
+    required this.newsType,
     required this.category,
     required this.images,
     required this.targetGroupIds,
@@ -38,6 +40,7 @@ class NewsModel {
       id: json['_id'],
       title: json['title'],
       content: json['content'],
+      newsType: json['newsType']?.toString() ?? 'group',
       category: json['category'],
       images: List<String>.from(json['images'] ?? []),
       targetGroupIds: targetGroups
@@ -67,6 +70,7 @@ class NewsModel {
     return {
       'title': title,
       'content': content,
+      'newsType': newsType,
       'category': category,
       'images': images,
       'targetGroups': targetGroupIds,

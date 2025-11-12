@@ -3,6 +3,8 @@ const Order = require("../models/Order");
 const User = require("../models/User");
 const Group = require("../models/Group");
 const Attendance = require("../models/Attendance");
+const PhotoReport = require("../models/PhotoReport");
+const { Parser } = require("json2csv");
 
 // Финансовая аналитика
 const getFinancialAnalytics = async (req, res) => {
@@ -271,7 +273,7 @@ const getPaymentsAnalytics = async (req, res) => {
   }
 };
 
-// Экспорт данных (заглушка для будущей реализации)
+// Экспорт финансовых данных
 const exportAnalytics = async (req, res) => {
   try {
     if (
@@ -281,8 +283,104 @@ const exportAnalytics = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // В будущем здесь будет генерация Excel/PDF
-    res.json({ message: "Export feature coming soon" });
+    const { startDate, endDate, format = "csv" } = req.query;
+    const dateFilter = {};
+
+    if (startDate || endDate) {
+      dateFilter.createdAt = {};
+      if (startDate) dateFilter.createdAt.$gte = new Date(startDate);
+      if (endDate) dateFilter.createdAt.$lte = new Date(endDate);
+    }
+
+    const paymentsRevenue = await Payment.aggregate([
+      { $match: { status: "paid", ...dateFilter } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    const ordersRevenue = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ["paid", "ready", "completed"] },
+          ...dateFilter,
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+    ]);
+
+    const revenueByMonth = await Payment.aggregate([
+      { $match: { status: "paid", ...dateFilter } },
+      {
+        $group: {
+          _id: { year: "$year", month: "$month" },
+          total: { $sum: "$amount" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": -1, "_id.month": -1 } },
+      { $limit: 12 },
+    ]);
+
+    const topProducts = await Order.aggregate([
+      {
+        $match: {
+          status: { $in: ["paid", "ready", "completed"] },
+          ...dateFilter,
+        },
+      },
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: "$items.productId",
+          name: { $first: "$items.name" },
+          totalSold: { $sum: "$items.quantity" },
+          revenue: {
+            $sum: { $multiply: ["$items.price", "$items.quantity"] },
+          },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const rows = [];
+    const payments = paymentsRevenue[0]?.total || 0;
+    const orders = ordersRevenue[0]?.total || 0;
+    const total = payments + orders;
+
+    rows.push(
+      { section: "Overview", name: "Доход абонементы", value: payments },
+      { section: "Overview", name: "Доход магазин", value: orders },
+      { section: "Overview", name: "Доход общий", value: total }
+    );
+
+    revenueByMonth.forEach((item) => {
+      rows.push({
+        section: "Месяцы",
+        name: `${item._id.month}.${item._id.year}`,
+        value: item.total,
+      });
+    });
+
+    topProducts.forEach((product) => {
+      rows.push({
+        section: "ТОП товары",
+        name: product.name,
+        value: product.revenue,
+      });
+    });
+
+    if (format !== "csv") {
+      return res
+        .status(400)
+        .json({ message: "Only CSV export is supported right now." });
+    }
+
+    const parser = new Parser({ fields: ["section", "name", "value"] });
+    const csv = parser.parse(rows);
+
+    res.header("Content-Type", "text/csv");
+    res.attachment(`financial_export_${Date.now()}.csv`);
+    res.send(csv);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -693,6 +791,95 @@ const getDashboard = async (req, res) => {
     // Ожидающие заказы
     const pendingOrders = await Order.countDocuments({ status: "pending" });
 
+    // Pending студентов
+    const pendingStudents = await User.countDocuments({
+      userType: { $in: ["student"] },
+      status: "pending",
+    });
+
+    // ТОП-3 группы по посещаемости (последние 30 дней)
+    const last30Days = new Date(now);
+    last30Days.setDate(last30Days.getDate() - 30);
+
+    const topGroupsByAttendance = await Attendance.aggregate([
+      { $match: { date: { $gte: last30Days } } },
+      {
+        $group: {
+          _id: "$groupId",
+          total: { $sum: 1 },
+          present: {
+            $sum: { $cond: [{ $eq: ["$status", "present"] }, 1, 0] },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "groups",
+          localField: "_id",
+          foreignField: "_id",
+          as: "group",
+        },
+      },
+      { $unwind: "$group" },
+      {
+        $project: {
+          groupId: "$_id",
+          groupName: "$group.name",
+          attendanceRate: {
+            $cond: [
+              { $gt: ["$total", 0] },
+              {
+                $multiply: [{ $divide: ["$present", "$total"] }, 100],
+              },
+              0,
+            ],
+          },
+        },
+      },
+      { $sort: { attendanceRate: -1 } },
+      { $limit: 3 },
+    ]);
+
+    // ТОП-3 тренера по активности фотоотчётов (последние 30 дней)
+    const topTrainersByPhotoReports = await PhotoReport.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: last30Days },
+          type: { $in: ["training_before", "training_after"] },
+        },
+      },
+      {
+        $group: {
+          _id: "$authorId",
+          reports: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "trainer",
+        },
+      },
+      { $unwind: "$trainer" },
+      {
+        $project: {
+          trainerId: "$_id",
+          trainerName: "$trainer.fullName",
+          reports: 1,
+        },
+      },
+      { $sort: { reports: -1 } },
+      { $limit: 3 },
+    ]);
+
+    // Последние 5 фотоотчётов
+    const latestPhotoReports = await PhotoReport.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate("authorId", "fullName userType");
+
     res.json({
       overview: {
         totalStudents,
@@ -700,6 +887,7 @@ const getDashboard = async (req, res) => {
         totalTrainers,
         unpaidPayments,
         pendingOrders,
+        pendingStudents,
       },
       currentMonth: {
         revenue: monthRevenue[0]?.total || 0,
@@ -716,6 +904,11 @@ const getDashboard = async (req, res) => {
                 100
               ).toFixed(2)
             : 0,
+      },
+      highlights: {
+        topGroupsByAttendance,
+        topTrainersByPhotoReports,
+        latestPhotoReports,
       },
     });
   } catch (error) {

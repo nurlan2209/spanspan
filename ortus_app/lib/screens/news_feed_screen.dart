@@ -16,6 +16,7 @@ class NewsFeedScreen extends StatefulWidget {
 
 class _NewsFeedScreenState extends State<NewsFeedScreen> {
   String? _selectedCategory;
+  String _selectedType = 'all';
   late Future<List<NewsModel>> _newsFuture;
 
   final categories = {
@@ -38,6 +39,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
       _newsFuture = NewsService().getAllNews(
         category: _selectedCategory,
         groupId: user?.groupId,
+        type: _selectedType == 'all' ? null : _selectedType,
       );
     });
   }
@@ -45,7 +47,11 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).user;
-    final canCreateNews = user?.isAdmin == true || user?.isTrainer == true;
+    final canCreateNews =
+        user?.isAdmin == true ||
+        user?.isTrainer == true ||
+        user?.hasRole('manager') == true ||
+        user?.hasRole('director') == true;
 
     return Scaffold(
       appBar: AppBar(
@@ -69,6 +75,8 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
       ),
       body: Column(
         children: [
+          _buildTypeFilter(),
+          const SizedBox(height: 8),
           _buildCategoryFilter(),
           Expanded(
             child: FutureBuilder<List<NewsModel>>(
@@ -149,6 +157,35 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     );
   }
 
+  Widget _buildTypeFilter() {
+    const types = {'all': 'Все', 'group': 'Групповые', 'general': 'Общие'};
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemBuilder: (context, index) {
+          final key = types.keys.elementAt(index);
+          final label = types[key]!;
+          final isSelected = _selectedType == key;
+          return ChoiceChip(
+            label: Text(label),
+            selected: isSelected,
+            onSelected: (_) {
+              setState(() {
+                _selectedType = key;
+                _loadNews();
+              });
+            },
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemCount: types.length,
+      ),
+    );
+  }
+
   Widget _buildNewsCard(NewsModel news) {
     return GestureDetector(
       onTap: () {
@@ -157,7 +194,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
           MaterialPageRoute(
             builder: (context) => NewsDetailScreen(newsId: news.id),
           ),
-        );
+        ).then((_) => _loadNews());
       },
       child: Card(
         margin: const EdgeInsets.only(bottom: 16),
@@ -239,6 +276,14 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      Chip(
+                        label: Text(
+                          news.newsType == 'general' ? 'Общая' : 'Групповая',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
                       ),
                       const Spacer(),
                       Text(

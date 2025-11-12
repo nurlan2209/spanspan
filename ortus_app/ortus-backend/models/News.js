@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 const newsSchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
+  newsType: {
+    type: String,
+    enum: ["group", "general"],
+    default: "group",
+  },
   category: {
     type: String,
     enum: ["general", "tournament", "event", "announcement"],

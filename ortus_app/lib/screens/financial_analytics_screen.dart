@@ -12,6 +12,9 @@ class FinancialAnalyticsScreen extends StatefulWidget {
 
 class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
   late Future<Map<String, dynamic>?> _analyticsFuture;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -21,7 +24,10 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
 
   void _loadAnalytics() {
     setState(() {
-      _analyticsFuture = AnalyticsService().getFinancialAnalytics();
+      _analyticsFuture = AnalyticsService().getFinancialAnalytics(
+        startDate: _startDate,
+        endDate: _endDate,
+      );
     });
   }
 
@@ -57,9 +63,12 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                _buildFilters(),
                 _buildRevenueOverview(data),
                 const SizedBox(height: 20),
                 _buildOrdersStats(data['orders']),
+                const SizedBox(height: 20),
+                _buildAverageCard(_asDouble(data['avgOrderValue'])),
                 const SizedBox(height: 20),
                 _buildRevenueByMonth(data['revenueByMonth']),
                 const SizedBox(height: 20),
@@ -72,7 +81,97 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
     );
   }
 
+  Widget _buildFilters() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Период отчёта',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _selectStartDate,
+                icon: const Icon(Icons.calendar_today),
+                label: Text(
+                  _startDate == null
+                      ? 'С какой даты'
+                      : _startDate!.toString().split(' ').first,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _selectEndDate,
+                icon: const Icon(Icons.calendar_today_outlined),
+                label: Text(
+                  _endDate == null
+                      ? 'По какую дату'
+                      : _endDate!.toString().split(' ').first,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          children: [
+            ActionChip(
+              label: const Text('Этот месяц'),
+              onPressed: _setCurrentMonth,
+            ),
+            ActionChip(
+              label: const Text('Прошлый месяц'),
+              onPressed: _setLastMonth,
+            ),
+            ActionChip(label: const Text('Год'), onPressed: _setCurrentYear),
+            if (_startDate != null || _endDate != null)
+              ActionChip(
+                label: const Text('Сбросить'),
+                onPressed: _clearFilters,
+                backgroundColor: Colors.grey.shade200,
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton.icon(
+            onPressed: _isExporting ? null : _exportAnalytics,
+            icon: _isExporting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.white,
+                    ),
+                  )
+                : const Icon(Icons.download),
+            label: Text(_isExporting ? 'Экспорт...' : 'Экспорт XLSX'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
   Widget _buildRevenueOverview(Map<String, dynamic> data) {
+    final paymentsRevenue = _asDouble(data['paymentsRevenue']);
+    final ordersRevenue = _asDouble(data['ordersRevenue']);
+    final totalRevenue = _asDouble(
+      data['totalRevenue'] ?? paymentsRevenue + ordersRevenue,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -99,7 +198,7 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
             child: Column(
               children: [
                 Text(
-                  '${data['totalRevenue'].toStringAsFixed(0)} ₸',
+                  _formatCurrency(totalRevenue),
                   style: const TextStyle(
                     color: AppColors.white,
                     fontSize: 40,
@@ -112,7 +211,7 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
                   children: [
                     _buildRevenueItem(
                       'Абонементы',
-                      '${data['paymentsRevenue'].toStringAsFixed(0)} ₸',
+                      _formatCurrency(paymentsRevenue),
                     ),
                     Container(
                       width: 1,
@@ -121,7 +220,7 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
                     ),
                     _buildRevenueItem(
                       'Магазин',
-                      '${data['ordersRevenue'].toStringAsFixed(0)} ₸',
+                      _formatCurrency(ordersRevenue),
                     ),
                   ],
                 ),
@@ -199,6 +298,47 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
     );
   }
 
+  Widget _buildAverageCard(double avg) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.receipt_long, color: AppColors.primary),
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Средний чек магазина',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _formatCurrency(avg),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatCard(
     String label,
     String value,
@@ -250,7 +390,7 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
         ...revenueByMonth.map((item) {
           final month = item['_id']['month'];
           final year = item['_id']['year'];
-          final total = item['total'];
+          final total = _asDouble(item['total']);
           final count = item['count'];
 
           return Card(
@@ -267,12 +407,12 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
                 ),
               ),
               title: Text(
-                _getMonthName(month) + ' $year',
+                '${_getMonthName(month)} $year',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text('$count платежей'),
               trailing: Text(
-                '${total.toStringAsFixed(0)} ₸',
+                _formatCurrency(total),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -302,6 +442,7 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
         ...topProducts.asMap().entries.map((entry) {
           final index = entry.key;
           final product = entry.value;
+          final revenue = _asDouble(product['revenue']);
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
@@ -321,7 +462,7 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
               ),
               subtitle: Text('Продано: ${product['totalSold']} шт'),
               trailing: Text(
-                '${product['revenue'].toStringAsFixed(0)} ₸',
+                _formatCurrency(revenue),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -333,6 +474,95 @@ class _FinancialAnalyticsScreenState extends State<FinancialAnalyticsScreen> {
         }),
       ],
     );
+  }
+
+  Future<void> _selectStartDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 2)),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _startDate = picked);
+      _loadAnalytics();
+    }
+  }
+
+  Future<void> _selectEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365 * 2)),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _endDate = picked);
+      _loadAnalytics();
+    }
+  }
+
+  void _setCurrentMonth() {
+    final now = DateTime.now();
+    setState(() {
+      _startDate = DateTime(now.year, now.month, 1);
+      _endDate = DateTime(now.year, now.month + 1, 0);
+    });
+    _loadAnalytics();
+  }
+
+  void _setLastMonth() {
+    final now = DateTime.now();
+    final prev = DateTime(now.year, now.month - 1, 1);
+    setState(() {
+      _startDate = prev;
+      _endDate = DateTime(prev.year, prev.month + 1, 0);
+    });
+    _loadAnalytics();
+  }
+
+  void _setCurrentYear() {
+    final now = DateTime.now();
+    setState(() {
+      _startDate = DateTime(now.year, 1, 1);
+      _endDate = DateTime(now.year, 12, 31);
+    });
+    _loadAnalytics();
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+    });
+    _loadAnalytics();
+  }
+
+  Future<void> _exportAnalytics() async {
+    setState(() => _isExporting = true);
+    final success = await AnalyticsService().exportFinancialAnalytics();
+    if (!mounted) return;
+    setState(() => _isExporting = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Экспорт будет доступен в административной панели.'
+              : 'Не удалось экспортировать данные',
+        ),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ),
+    );
+  }
+
+  double _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  String _formatCurrency(double value) {
+    return '${value.toStringAsFixed(0)} ₸';
   }
 
   String _getMonthName(int month) {

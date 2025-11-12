@@ -54,6 +54,25 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () => Navigator.pushNamed(context, '/admin-dashboard'),
             ),
 
+          if (user?.hasRole('manager') ?? false)
+            IconButton(
+              icon: const Icon(Icons.person_add_alt_1, color: AppColors.white),
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/pending-students'),
+            ),
+
+          if (user?.hasRole('tech_staff') ?? false) ...[
+            IconButton(
+              icon: const Icon(Icons.cleaning_services, color: AppColors.white),
+              onPressed: () => Navigator.pushNamed(context, '/cleaning-report'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.history, color: AppColors.white),
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/cleaning-history'),
+            ),
+          ],
+
           if (user?.isTrainer ?? false) ...[
             IconButton(
               icon: const Icon(Icons.group_add, color: AppColors.white),
@@ -73,17 +92,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               onPressed: () => Navigator.pushNamed(context, '/create-schedule'),
             ),
-            if (user?.userType.contains('admin') == true ||
-                user?.userType.contains('trainer') == true) ...[
-              IconButton(
-                icon: const Icon(Icons.bar_chart, color: AppColors.white),
-                onPressed: () => Navigator.pushNamed(context, '/payment-stats'),
-              ),
-            ],
-            IconButton(
-              icon: const Icon(Icons.payment, color: AppColors.white),
-              onPressed: () => Navigator.pushNamed(context, '/payments'),
-            ),
             if (user?.userType.contains('trainer') == true)
               IconButton(
                 icon: const Icon(Icons.fact_check, color: AppColors.white),
@@ -96,7 +104,18 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () =>
                   Navigator.pushNamed(context, '/attendance-analytics'),
             ),
+            IconButton(
+              icon: const Icon(Icons.photo_camera, color: AppColors.white),
+              onPressed: () => Navigator.pushNamed(context, '/photo-report'),
+            ),
           ],
+
+          if (user?.hasRole('director') ?? false)
+            IconButton(
+              icon: const Icon(Icons.photo_library, color: AppColors.white),
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/photo-reports-gallery'),
+            ),
         ],
       ),
       body: _screens[_currentIndex],

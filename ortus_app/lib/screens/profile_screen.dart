@@ -116,6 +116,10 @@ class ProfileScreen extends StatelessWidget {
         return Colors.red;
       case 'trainer':
         return Colors.orange;
+      case 'manager':
+        return Colors.blueAccent;
+      case 'tech_staff':
+        return Colors.brown;
       case 'student':
         return AppColors.primary;
       case 'parent':
@@ -134,6 +138,10 @@ class ProfileScreen extends StatelessWidget {
         return 'Администратор';
       case 'trainer':
         return 'Тренер';
+      case 'manager':
+        return 'Менеджер';
+      case 'tech_staff':
+        return 'Техничка';
       case 'student':
         return 'Ученик';
       case 'parent':

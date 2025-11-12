@@ -140,4 +140,14 @@ class AnalyticsService {
     }
     return null;
   }
+
+  Future<bool> exportFinancialAnalytics({String format = 'xlsx'}) async {
+    final token = await AuthService().getToken();
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/analytics/export?format=$format'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    return response.statusCode == 200;
+  }
 }

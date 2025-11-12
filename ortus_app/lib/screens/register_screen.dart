@@ -194,7 +194,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       // 2. Проверяем ключ 'success' в ответе
       if (result['success'] == true && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/app');
       } else if (mounted) {
         // 3. Показываем конкретную ошибку с сервера
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/news_model.dart';
 import '../models/group_model.dart';
+import '../providers/auth_provider.dart';
 import '../services/news_service.dart';
 import '../services/group_service.dart';
 import '../utils/constants.dart';
@@ -20,6 +22,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   String _selectedCategory = 'general';
+  String _newsType = 'group';
   List<String> _selectedGroupIds = [];
   List<String> _imageUrls = [];
   bool _isPinned = false;
@@ -39,6 +42,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
       _titleController.text = widget.news!.title;
       _contentController.text = widget.news!.content;
       _selectedCategory = widget.news!.category;
+      _newsType = widget.news!.newsType;
       _selectedGroupIds = List.from(widget.news!.targetGroupIds);
       _imageUrls = List.from(widget.news!.images);
       _isPinned = widget.news!.isPinned;
@@ -48,6 +52,21 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.news != null;
+    final user = context.watch<AuthProvider>().user;
+    final canCreateGroup =
+        user?.isTrainer == true ||
+        user?.isAdmin == true ||
+        user?.hasRole('director') == true;
+    final canCreateGeneral =
+        user?.hasRole('manager') == true ||
+        user?.isAdmin == true ||
+        user?.hasRole('director') == true;
+
+    if (!canCreateGroup && canCreateGeneral) {
+      _newsType = 'general';
+    } else if (canCreateGroup && !canCreateGeneral) {
+      _newsType = 'group';
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -63,6 +82,8 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            _buildTypeSelector(canCreateGroup, canCreateGeneral),
+            const SizedBox(height: 20),
             _buildCategorySelector(),
             const SizedBox(height: 20),
             TextFormField(
@@ -92,7 +113,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
               minLines: 5,
             ),
             const SizedBox(height: 20),
-            _buildGroupSelector(),
+            if (_newsType == 'group') _buildGroupSelector(),
             const SizedBox(height: 20),
             _buildImageSection(),
             const SizedBox(height: 20),
@@ -154,6 +175,50 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
             );
           }).toList(),
         ),
+      ],
+    );
+  }
+
+  Widget _buildTypeSelector(bool canGroup, bool canGeneral) {
+    final chips = <Map<String, String>>[];
+    if (canGroup) chips.add({'value': 'group', 'label': 'Групповая'});
+    if (canGeneral) chips.add({'value': 'general', 'label': 'Общая'});
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Тип новости',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          children: chips
+              .map(
+                (chip) => ChoiceChip(
+                  label: Text(chip['label']!),
+                  selected: _newsType == chip['value'],
+                  onSelected: (_) {
+                    setState(() {
+                      _newsType = chip['value']!;
+                      if (_newsType == 'general') {
+                        _selectedGroupIds.clear();
+                      }
+                    });
+                  },
+                ),
+              )
+              .toList(),
+        ),
+        if (_newsType == 'general')
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Общая новость видна всем группам',
+              style: TextStyle(color: AppColors.grey, fontSize: 12),
+            ),
+          ),
       ],
     );
   }
@@ -384,9 +449,10 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
     final newsData = {
       'title': _titleController.text,
       'content': _contentController.text,
+      'newsType': _newsType,
       'category': _selectedCategory,
       'images': _imageUrls,
-      'targetGroups': _selectedGroupIds,
+      'targetGroups': _newsType == 'general' ? [] : _selectedGroupIds,
       'isPinned': _isPinned,
     };
 

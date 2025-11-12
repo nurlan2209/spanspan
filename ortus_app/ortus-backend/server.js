@@ -15,6 +15,9 @@ const paymentRoutes = require("./routes/payments");
 const attendanceRoutes = require("./routes/attendance");
 const newsRoutes = require("./routes/news");
 const analyticsRoutes = require("./routes/analytics"); // НОВОЕ
+const photoReportRoutes = require("./routes/photoReports");
+const cleaningReportRoutes = require("./routes/cleaningReports");
+const exportRoutes = require("./routes/export");
 
 const app = express();
 
@@ -50,6 +53,9 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/analytics", analyticsRoutes); 
+app.use("/api/photo-reports", photoReportRoutes);
+app.use("/api/cleaning-reports", cleaningReportRoutes);
+app.use("/api/export", exportRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {

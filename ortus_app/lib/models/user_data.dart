@@ -8,7 +8,10 @@ class UserData {
   final DateTime dateOfBirth;
   final double weight;
   final List<String> userType;
+  final String? status;
   final String? groupId;
+  final String? groupName;
+  final DateTime? createdAt;
   final List<UserData>? children;
   final UserData? parent;
 
@@ -20,7 +23,10 @@ class UserData {
     required this.dateOfBirth,
     required this.weight,
     required this.userType,
+    this.status,
     this.groupId,
+    this.groupName,
+    this.createdAt,
     this.children,
     this.parent,
   });
@@ -42,6 +48,16 @@ class UserData {
 
     debugPrint('✅ userTypeList: $userTypeList');
 
+    String? resolvedGroupId;
+    String? resolvedGroupName;
+    final groupData = json['groupId'];
+    if (groupData is Map) {
+      resolvedGroupId = groupData['_id']?.toString();
+      resolvedGroupName = groupData['name']?.toString();
+    } else if (groupData is String) {
+      resolvedGroupId = groupData;
+    }
+
     return UserData(
       id: json['_id']?.toString() ?? '',
       phoneNumber: json['phoneNumber']?.toString() ?? '',
@@ -52,7 +68,10 @@ class UserData {
           DateTime.now(),
       weight: double.tryParse(json['weight']?.toString() ?? '0') ?? 0.0,
       userType: userTypeList,
-      groupId: json['groupId']?.toString(),
+      status: json['status']?.toString(),
+      groupId: resolvedGroupId,
+      groupName: resolvedGroupName,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
       children: null,
       parent: null,
     );

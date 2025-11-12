@@ -1,25 +1,80 @@
 const News = require("../models/News");
-const User = require("../models/User");
+
+const roleFlags = (user) => ({
+  isAdmin: user.userType.includes("admin"),
+  isDirector: user.userType.includes("director"),
+  isTrainer: user.userType.includes("trainer"),
+  isManager: user.userType.includes("manager"),
+});
 
 // Создать новость (admin/trainer)
 const createNews = async (req, res) => {
   try {
-    if (
-      !req.user.userType.includes("admin") &&
-      !req.user.userType.includes("trainer")
-    ) {
+    const { isAdmin, isDirector, isTrainer, isManager } = roleFlags(req.user);
+
+    if (!isAdmin && !isTrainer && !isManager && !isDirector) {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const { title, content, category, images, targetGroups, isPinned } =
-      req.body;
+    const {
+      title,
+      content,
+      category,
+      images,
+      targetGroups,
+      isPinned,
+      newsType,
+    } = req.body;
+
+    let resolvedType = newsType;
+    if (!resolvedType) {
+      resolvedType = isTrainer ? "group" : "general";
+    }
+
+    if (
+      resolvedType === "group" &&
+      !isTrainer &&
+      !isAdmin &&
+      !isDirector
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Only trainers/admins/directors can post group news" });
+    }
+
+    if (
+      resolvedType === "general" &&
+      !isManager &&
+      !isAdmin &&
+      !isDirector
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Only managers/admins/directors can post general news" });
+    }
+
+    const normalizedTargets =
+      resolvedType === "general"
+        ? []
+        : Array.isArray(targetGroups)
+        ? targetGroups
+        : targetGroups
+        ? [targetGroups]
+        : [];
+
+    if (resolvedType === "group" && !normalizedTargets.length) {
+      return res
+        .status(400)
+        .json({ message: "Group news must specify at least one group" });
+    }
 
     const news = await News.create({
       title,
       content,
+      newsType: resolvedType,
       category: category || "general",
       images: images || [],
-      targetGroups: targetGroups || [],
+      targetGroups: normalizedTargets,
       authorId: req.user._id,
       isPinned: isPinned || false,
     });
@@ -36,20 +91,23 @@ const createNews = async (req, res) => {
 // Получить все новости (с фильтрами)
 const getAllNews = async (req, res) => {
   try {
-    const { category, groupId } = req.query;
+    const { category, groupId, type } = req.query;
     const filter = { isActive: true };
 
     if (category) filter.category = category;
 
-    // Если указана группа - показываем новости для всех + для этой группы
-    if (groupId) {
+    if (type === "general") {
+      filter.newsType = "general";
+    } else if (type === "group") {
+      filter.newsType = "group";
+      if (groupId) {
+        filter.targetGroups = groupId;
+      }
+    } else if (groupId) {
       filter.$or = [
-        { targetGroups: { $size: 0 } }, // Новости для всех
-        { targetGroups: groupId }, // Новости для конкретной группы
+        { newsType: "general" },
+        { newsType: "group", targetGroups: groupId },
       ];
-    } else {
-      // Если группа не указана - только общие новости
-      filter.targetGroups = { $size: 0 };
     }
 
     const news = await News.find(filter)
@@ -89,22 +147,57 @@ const updateNews = async (req, res) => {
       return res.status(404).json({ message: "News not found" });
     }
 
-    // Проверка прав: админ может всё, тренер только свои новости
-    const isAdmin = req.user.userType.includes("admin");
+    const { isAdmin, isDirector, isManager, isTrainer } = roleFlags(req.user);
     const isAuthor = news.authorId.toString() === req.user._id.toString();
 
-    if (!isAdmin && !isAuthor) {
+    if (!isAdmin && !isDirector && !isAuthor) {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const { title, content, category, images, targetGroups, isPinned } =
-      req.body;
+    const {
+      title,
+      content,
+      category,
+      images,
+      targetGroups,
+      isPinned,
+      newsType,
+    } = req.body;
+
+    if (newsType && newsType !== news.newsType && !isAdmin && !isDirector) {
+      return res
+        .status(403)
+        .json({ message: "Only admins/directors can change news type" });
+    }
+
+    if (newsType === "general" && !isManager && !isAdmin && !isDirector) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    if (newsType === "group" && !isTrainer && !isAdmin && !isDirector) {
+      return res.status(403).json({ message: "Access denied" });
+    }
 
     if (title) news.title = title;
     if (content) news.content = content;
     if (category) news.category = category;
     if (images !== undefined) news.images = images;
-    if (targetGroups !== undefined) news.targetGroups = targetGroups;
+    if (newsType) {
+      news.newsType = newsType;
+      if (newsType === "general") {
+        news.targetGroups = [];
+      }
+    }
+    if (targetGroups !== undefined) {
+      news.targetGroups =
+        news.newsType === "general"
+          ? []
+          : Array.isArray(targetGroups)
+          ? targetGroups
+          : targetGroups
+          ? [targetGroups]
+          : [];
+    }
     if (isPinned !== undefined) news.isPinned = isPinned;
 
     await news.save();
@@ -126,10 +219,10 @@ const deleteNews = async (req, res) => {
       return res.status(404).json({ message: "News not found" });
     }
 
-    const isAdmin = req.user.userType.includes("admin");
+    const { isAdmin, isDirector } = roleFlags(req.user);
     const isAuthor = news.authorId.toString() === req.user._id.toString();
 
-    if (!isAdmin && !isAuthor) {
+    if (!isAdmin && !isDirector && !isAuthor) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -145,8 +238,11 @@ const deleteNews = async (req, res) => {
 // Закрепить/открепить новость (только admin)
 const togglePinNews = async (req, res) => {
   try {
-    if (!req.user.userType.includes("admin")) {
-      return res.status(403).json({ message: "Only admins can pin news" });
+    const { isAdmin, isDirector } = roleFlags(req.user);
+    if (!isAdmin && !isDirector) {
+      return res
+        .status(403)
+        .json({ message: "Only admins or directors can pin news" });
     }
 
     const news = await News.findById(req.params.id);

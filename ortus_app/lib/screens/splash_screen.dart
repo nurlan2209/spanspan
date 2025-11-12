@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen>
@@ -17,19 +19,25 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 2),
+      duration: const Duration(milliseconds: 1500),
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
     _scaleAnimation = Tween<double>(
-      begin: 0.8,
+      begin: 0.9,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
     _controller.forward();
 
-    Future.delayed(Duration(seconds: 3), () {
-      Navigator.pushReplacementNamed(context, '/login');
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleNavigation());
+  }
+
+  Future<void> _handleNavigation() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    await auth.checkAuth();
+
+    if (!mounted) return;
+    final destination = auth.isAuthenticated ? '/app' : '/login';
+    Navigator.pushReplacementNamed(context, destination);
   }
 
   @override
@@ -43,8 +51,8 @@ class _SplashScreenState extends State<SplashScreen>
             scale: _scaleAnimation,
             child: Image.asset(
               'assets/images/logo.png',
-              width: 300,
-              height: 300,
+              width: 220,
+              height: 220,
             ),
           ),
         ),

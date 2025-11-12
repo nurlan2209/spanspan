@@ -14,7 +14,6 @@ const getAllProducts = async (req, res) => {
   }
 };
 
-// Получить товар по ID
 const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -27,10 +26,8 @@ const getProductById = async (req, res) => {
   }
 };
 
-// Создать товар (только admin)
 const createProduct = async (req, res) => {
   try {
-    // ✅ РАЗРЕШИТЬ И DIRECTOR
     if (
       !req.user.userType.includes("admin") &&
       !req.user.userType.includes("director")
@@ -42,7 +39,6 @@ const createProduct = async (req, res) => {
 
     const { name, description, category, price } = req.body;
 
-    // ✅ ПОЛУЧАЕМ URLS ИЗ CLOUDINARY
     const images = req.files ? req.files.map((file) => file.path) : [];
 
     const product = await Product.create({
@@ -61,7 +57,6 @@ const createProduct = async (req, res) => {
   }
 };
 
-// Обновить товар (только admin)
 const updateProduct = async (req, res) => {
   try {
     if (!req.user.userType.includes("admin")) {
@@ -85,7 +80,6 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// Удалить товар (только admin, мягкое удаление)
 const deleteProduct = async (req, res) => {
   try {
     if (!req.user.userType.includes("admin")) {
@@ -142,7 +136,6 @@ const updateStock = async (req, res) => {
     console.log("✅ Product found:", product.name);
     console.log("Current sizes:", product.sizes);
 
-    // ✅ НАЙТИ ИЛИ СОЗДАТЬ РАЗМЕР
     const sizeIndex = product.sizes.findIndex((s) => s.size === size);
 
     if (sizeIndex === -1) {

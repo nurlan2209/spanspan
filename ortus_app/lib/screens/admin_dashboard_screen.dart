@@ -34,10 +34,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.black,
-        title: const Text(
-          'Дашборд',
-          style: TextStyle(color: AppColors.white),
-        ),
+        title: const Text('Дашборд', style: TextStyle(color: AppColors.white)),
         iconTheme: const IconThemeData(color: AppColors.white),
       ),
       body: RefreshIndicator(
@@ -60,6 +57,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             final overview = data['overview'];
             final currentMonth = data['currentMonth'];
             final recentAttendance = data['recentAttendance'];
+            final highlights = data['highlights'] ?? {};
 
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -76,6 +74,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 _buildCurrentMonthCard(currentMonth),
                 const SizedBox(height: 20),
                 _buildRecentAttendanceCard(recentAttendance),
+                const SizedBox(height: 24),
+                _buildHighlights(highlights),
                 const SizedBox(height: 24),
                 const Text(
                   'Детальная аналитика',
@@ -178,20 +178,133 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ],
         ),
-        if (overview['pendingOrders'] > 0) ...[
-          const SizedBox(height: 12),
-          _buildAlertCard(
-            'Заказов в ожидании',
-            '${overview['pendingOrders']}',
-            Icons.shopping_cart,
-            Colors.amber,
-          ),
-        ],
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMiniCard(
+                'Pending студенты',
+                '${overview['pendingStudents']}',
+                Icons.timelapse,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMiniCard(
+                'Заказы в ожидании',
+                '${overview['pendingOrders']}',
+                Icons.shopping_cart,
+                Colors.amber,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
-  Widget _buildMiniCard(String title, String value, IconData icon, Color color) {
+  Widget _buildHighlights(Map<String, dynamic> highlights) {
+    final topGroups = List<Map<String, dynamic>>.from(
+      highlights['topGroupsByAttendance'] ?? [],
+    );
+    final topTrainers = List<Map<String, dynamic>>.from(
+      highlights['topTrainersByPhotoReports'] ?? [],
+    );
+    final latestReports = List<Map<String, dynamic>>.from(
+      highlights['latestPhotoReports'] ?? [],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Топ показатели',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        _buildHighlightCard(
+          title: 'Топ-3 группы по посещаемости',
+          icon: Icons.groups,
+          color: Colors.green,
+          items: topGroups.map((item) {
+            final rate = (item['attendanceRate'] ?? 0).toStringAsFixed(1);
+            return '${item['groupName']} — $rate%';
+          }).toList(),
+        ),
+        const SizedBox(height: 12),
+        _buildHighlightCard(
+          title: 'Топ-3 тренера по фотоотчётам',
+          icon: Icons.camera_alt,
+          color: Colors.blue,
+          items: topTrainers.map((item) {
+            return '${item['trainerName']} — ${item['reports']} отчётов';
+          }).toList(),
+        ),
+        const SizedBox(height: 12),
+        _buildHighlightCard(
+          title: 'Последние фотоотчёты',
+          icon: Icons.photo_library,
+          color: Colors.purple,
+          items: latestReports.map((item) {
+            final author = item['authorId'] is Map
+                ? item['authorId']['fullName']
+                : 'Сотрудник';
+            final type = item['type'];
+            return '$author — $type';
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHighlightCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<String> items,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(fontWeight: FontWeight.bold, color: color),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (items.isEmpty)
+            const Text('Данных пока нет')
+          else
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(item),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -214,10 +327,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const SizedBox(height: 4),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.grey,
-            ),
+            style: TextStyle(fontSize: 12, color: AppColors.grey),
             textAlign: TextAlign.center,
           ),
         ],
@@ -225,7 +335,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildAlertCard(String title, String value, IconData icon, Color color) {
+  Widget _buildAlertCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -525,10 +640,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.grey,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.grey),
                   ),
                 ],
               ),

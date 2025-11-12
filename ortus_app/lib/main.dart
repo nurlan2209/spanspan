@@ -6,14 +6,11 @@ import 'screens/splash_screen.dart';
 import 'screens/manage_products_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/home_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/create_group_screen.dart';
 import 'screens/group_requests_screen.dart';
 import 'screens/create_schedule_screen.dart';
 import 'screens/edit_profile_screen.dart';
-import 'screens/payments_screen.dart';
-import 'screens/payment_stats_screen.dart';
 import 'utils/constants.dart';
 import 'screens/mark_attendance_screen.dart';
 import 'screens/news_feed_screen.dart';
@@ -23,6 +20,12 @@ import 'screens/admin_dashboard_screen.dart';
 import 'screens/attendance_analytics_admin_screen.dart';
 import 'screens/groups_comparison_screen.dart';
 import 'screens/create_user_screen.dart';
+import 'screens/manager/pending_students_screen.dart';
+import 'widgets/app_navigator.dart';
+import 'screens/photo_reports/photo_report_screen.dart';
+import 'screens/photo_reports/photo_reports_gallery_screen.dart';
+import 'screens/cleaning/cleaning_report_screen.dart';
+import 'screens/cleaning/cleaning_history_screen.dart';
 
 void main() {
   runApp(
@@ -52,14 +55,13 @@ class MyApp extends StatelessWidget {
         '/': (context) => SplashScreen(),
         '/login': (context) => LoginScreen(),
         '/register': (context) => RegisterScreen(),
-        '/home': (context) => HomeScreen(),
+        '/home': (context) => const AppNavigator(),
+        '/app': (context) => const AppNavigator(),
         '/profile': (context) => ProfileScreen(),
         '/create-group': (context) => CreateGroupScreen(),
         '/group-requests': (context) => GroupRequestsScreen(),
         '/create-schedule': (context) => CreateScheduleScreen(),
         '/edit-profile': (context) => EditProfileScreen(),
-        '/payments': (context) => PaymentsScreen(),
-        '/payment-stats': (context) => PaymentStatsScreen(),
         '/news': (context) => const NewsFeedScreen(),
         '/mark-attendance': (context) => MarkAttendanceScreen(),
         '/admin-dashboard': (context) => const AdminDashboardScreen(),
@@ -68,6 +70,12 @@ class MyApp extends StatelessWidget {
         '/groups-comparison': (context) => const GroupComparisonScreen(),
         '/manage-products': (context) => const ManageProductsScreen(),
         '/create-user': (context) => const CreateUserScreen(),
+        '/pending-students': (context) => const PendingStudentsScreen(),
+        '/photo-report': (context) => const PhotoReportScreen(),
+        '/photo-reports-gallery': (context) =>
+            const PhotoReportsGalleryScreen(),
+        '/cleaning-report': (context) => const CleaningReportScreen(),
+        '/cleaning-history': (context) => const CleaningHistoryScreen(),
       },
     );
   }

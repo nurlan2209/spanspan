@@ -2,6 +2,7 @@ const Attendance = require("../models/Attendance");
 const Schedule = require("../models/Schedule");
 const Group = require("../models/Group");
 const User = require("../models/User");
+const PhotoReport = require("../models/PhotoReport");
 
 // Создать записи посещаемости для группы на дату (тренер)
 const createAttendanceForGroup = async (req, res) => {
@@ -91,6 +92,23 @@ const markAttendance = async (req, res) => {
     attendance.status = status;
     if (note) attendance.note = note;
     attendance.markedBy = req.user._id;
+
+    if (
+      attendance.scheduleId &&
+      ["present", "absent", "sick"].includes(status)
+    ) {
+      const hasAfterPhoto = await PhotoReport.exists({
+        type: "training_after",
+        relatedId: attendance.scheduleId,
+      });
+
+      if (!hasAfterPhoto) {
+        return res.status(400).json({
+          message:
+            "Загрузите фото ПОСЛЕ тренировки в разделе фотоотчётов прежде чем закрывать посещаемость.",
+        });
+      }
+    }
 
     await attendance.save();
     await attendance.populate("studentId", "fullName phoneNumber");
