@@ -1,6 +1,6 @@
 const Product = require("../models/Product");
 
-const isManager = (user) => user.userType.includes("manager");
+const isAdmin = (user) => user.userType.includes("admin");
 
 // Получить все активные товары (для всех)
 const getAllProducts = async (req, res) => {
@@ -30,10 +30,10 @@ const getProductById = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
-    if (!isManager(req.user)) {
+    if (!isAdmin(req.user)) {
       return res
         .status(403)
-        .json({ message: "Only managers can create products" });
+        .json({ message: "Only admins can create products" });
     }
 
     const { name, description, category, price } = req.body;
@@ -58,10 +58,10 @@ const createProduct = async (req, res) => {
 
 const updateProduct = async (req, res) => {
   try {
-    if (!isManager(req.user)) {
+    if (!isAdmin(req.user)) {
       return res
         .status(403)
-        .json({ message: "Only managers can update products" });
+        .json({ message: "Only admins can update products" });
     }
 
     const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
@@ -81,10 +81,10 @@ const updateProduct = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
   try {
-    if (!isManager(req.user)) {
+    if (!isAdmin(req.user)) {
       return res
         .status(403)
-        .json({ message: "Only managers can delete products" });
+        .json({ message: "Only admins can delete products" });
     }
 
     const product = await Product.findByIdAndUpdate(
@@ -112,7 +112,7 @@ const updateStock = async (req, res) => {
 
     if (!isManager(req.user)) {
       console.log("❌ Access denied");
-      return res.status(403).json({ message: "Only managers can update stock" });
+      return res.status(403).json({ message: "Only admins can update stock" });
     }
 
     const { size, stock } = req.body;

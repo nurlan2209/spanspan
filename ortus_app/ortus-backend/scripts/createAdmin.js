@@ -25,7 +25,7 @@ const run = async () => {
   try {
     await connectDB();
 
-    console.log("=== Создание администратора ORTUS ===");
+    console.log("=== Создание директора ORTUS ===");
 
     const phoneNumber = await askRequired(
       "Телефон (+77001234567)",
@@ -56,12 +56,12 @@ const run = async () => {
       fullName,
       dateOfBirth: new Date(dateOfBirthRaw),
       weight: 0,
-      userType: ["admin"],
+      userType: ["director"],
       status: "active",
       password,
     });
 
-    console.log("✅ Администратор создан:");
+    console.log("✅ Директор создан:");
     console.log(`ID: ${user._id}`);
     console.log(`ФИО: ${user.fullName}`);
   } catch (error) {
