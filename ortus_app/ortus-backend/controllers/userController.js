@@ -30,7 +30,6 @@ const createUserByDirector = async (req, res) => {
       weight,
       userType,
       password,
-      groupId,
       status,
     } = req.body;
 
@@ -40,24 +39,24 @@ const createUserByDirector = async (req, res) => {
     }
 
     const normalizedRoles = Array.isArray(userType) ? userType : [userType];
-    const derivedStatus = status
-      ? status
-      : normalizedRoles.includes("student")
-      ? groupId
-        ? "active"
-        : "pending"
-      : "active";
+    const allowedRoles = ["trainer", "manager", "tech_staff", "admin"];
+    if (normalizedRoles.some((role) => !allowedRoles.includes(role))) {
+      return res
+        .status(400)
+        .json({ message: "Directors can create only staff roles" });
+    }
+
+    const derivedStatus = status || "active";
 
     const user = await User.create({
       phoneNumber,
       iin,
       fullName,
       dateOfBirth,
-      weight,
+      weight: weight ? parseFloat(weight) : 0,
       userType: normalizedRoles,
       status: derivedStatus,
       password,
-      groupId: groupId || null,
     });
 
     const userObject = user.toObject();
