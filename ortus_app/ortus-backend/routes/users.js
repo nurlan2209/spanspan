@@ -13,6 +13,7 @@ const {
   getStaff,
   updateUserStatus,
   getActiveTrainers,
+  getParentsList,
 } = require("../controllers/userController");
 const { protect } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -38,5 +39,6 @@ router.get("/students", protect, getAllStudents);
 router.get("/staff", protect, getStaff);
 router.patch("/:id/status", protect, updateUserStatus);
 router.get("/trainers", protect, getActiveTrainers);
+router.get("/parents", protect, getParentsList);
 
 module.exports = router;

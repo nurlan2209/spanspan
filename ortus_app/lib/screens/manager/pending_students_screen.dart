@@ -303,11 +303,14 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
         final parentIinController = TextEditingController();
         final parentNameController = TextEditingController();
         final parentPasswordController = TextEditingController();
-        final attachPhoneController = TextEditingController();
-        final attachIinController = TextEditingController();
+        final parentSearchController =
+            TextEditingController(text: student.parent?.fullName ?? '');
         DateTime? parentDob;
         bool isCreatingParent = false;
+        bool isSearchingParent = false;
         bool isAttachingParent = false;
+        bool showCreateParentForm = false;
+        List<UserData> parentResults = [];
 
         Future<void> submitParent(StateSetter setModalState) async {
           if (!formKey.currentState!.validate() || parentDob == null) {
@@ -348,28 +351,51 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
           }
         }
 
-        Future<void> attachParent(StateSetter setModalState) async {
-          if (attachPhoneController.text.isEmpty &&
-              attachIinController.text.isEmpty) {
+        Future<void> searchParents(StateSetter setModalState) async {
+          if (parentSearchController.text.trim().isEmpty) {
             ScaffoldMessenger.of(this.context).showSnackBar(
               const SnackBar(
-                content: Text('Укажите телефон или ИИН родителя'),
+                content: Text('Введите ФИО для поиска'),
                 backgroundColor: Colors.orange,
               ),
             );
             return;
           }
+          setModalState(() {
+            isSearchingParent = true;
+            parentResults = [];
+          });
+          try {
+            final results = await _userService.searchParents(
+              parentSearchController.text.trim(),
+            );
+            if (!context.mounted) return;
+            setModalState(() {
+              parentResults = results;
+            });
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                SnackBar(
+                  content: Text(e.toString()),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          } finally {
+            setModalState(() => isSearchingParent = false);
+          }
+        }
 
+        Future<void> attachParent(
+          StateSetter setModalState,
+          UserData parent,
+        ) async {
           setModalState(() => isAttachingParent = true);
           try {
             final updated = await _userService.attachParentToStudent(
               studentId: student.id,
-              parentPhone: attachPhoneController.text.isEmpty
-                  ? null
-                  : attachPhoneController.text,
-              parentIin: attachIinController.text.isEmpty
-                  ? null
-                  : attachIinController.text,
+              parentId: parent.id,
             );
             if (!context.mounted) return;
             if (updated != null) {
@@ -387,6 +413,34 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
           } finally {
             setModalState(() => isAttachingParent = false);
           }
+        }
+
+        Widget parentSearchField(StateSetter setModalState) {
+          return TextField(
+            controller: parentSearchController,
+            decoration: InputDecoration(
+              labelText: 'Поиск родителя по ФИО',
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: isSearchingParent
+                        ? null
+                        : () => searchParents(setModalState),
+                  ),
+                  IconButton(
+                    icon: Icon(showCreateParentForm ? Icons.close : Icons.add),
+                    onPressed: () {
+                      setModalState(() {
+                        showCreateParentForm = !showCreateParentForm;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
         }
 
         return StatefulBuilder(
@@ -421,6 +475,8 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                     _InfoRow(label: 'ФИО', value: student.fullName),
                     _InfoRow(label: 'Телефон', value: student.phoneNumber),
                     _InfoRow(label: 'ИИН', value: student.iin),
+                    if (student.groupName != null)
+                      _InfoRow(label: 'Группа', value: student.groupName!),
                     if (student.status != null)
                       _InfoRow(label: 'Статус', value: student.status!),
                     if (student.createdAt != null)
@@ -432,28 +488,37 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                       ),
                     const SizedBox(height: 20),
                     CustomButton(
-                      text: 'Назначить в группу',
+                      text: student.groupName == null
+                          ? 'Назначить в группу'
+                          : 'Сменить группу',
                       onPressed: () {
                         Navigator.pop(context);
                         _assignStudent(student);
                       },
                     ),
-                    const SizedBox(height: 28),
-                    if (student.parent != null)
-                      Card(
-                        color: AppColors.primary.withValues(alpha: 0.05),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Родитель',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                    const SizedBox(height: 24),
+                    Card(
+                      color: AppColors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: AppColors.grey.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Родитель',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
+                            ),
+                            if (student.parent != null) ...[
                               const SizedBox(height: 8),
                               _InfoRow(
                                 label: 'ФИО',
@@ -463,69 +528,46 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                                 label: 'Телефон',
                                 value: student.parent!.phoneNumber,
                               ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else ...[
-                      Card(
-                        color: AppColors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: AppColors.grey.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Прикрепить существующего родителя',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
                               const SizedBox(height: 12),
-                              TextField(
-                                controller: attachPhoneController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Телефон родителя',
-                                ),
-                                keyboardType: TextInputType.phone,
+                              const Divider(),
+                            ] else
+                              const SizedBox(height: 8),
+                            parentSearchField(setModalState),
+                            if (isSearchingParent)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 12),
+                                child: LinearProgressIndicator(),
                               ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: attachIinController,
-                                decoration:
-                                    const InputDecoration(labelText: 'ИИН'),
-                                keyboardType: TextInputType.number,
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton(
-                                  onPressed: isAttachingParent
-                                      ? null
-                                      : () => attachParent(setModalState),
-                                  child: isAttachingParent
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
+                            if (parentResults.isNotEmpty)
+                              Column(
+                                children: parentResults.map((parent) {
+                                  return ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(parent.fullName),
+                                    subtitle: Text(parent.phoneNumber),
+                                    trailing: isAttachingParent
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.check_circle_outline,
+                                            color: AppColors.primary,
                                           ),
-                                        )
-                                      : const Text('Прикрепить родителя'),
-                                ),
+                                    onTap: isAttachingParent
+                                        ? null
+                                        : () => attachParent(setModalState, parent),
+                                  );
+                                }).toList(),
                               ),
-                            ],
-                          ),
+                          ],
                         ),
                       ),
+                    ),
+                    if (showCreateParentForm) ...[
                       const SizedBox(height: 20),
                       const Text(
                         'Создать родителя',
@@ -591,8 +633,7 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                                         : parentDob!
                                             .toLocal()
                                             .toString()
-                                            .split(' ')
-                                            .first,
+                                            .split(' ')[0],
                                   ),
                                 ),
                                 TextButton(
@@ -651,7 +692,6 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
       await _loadStudents();
     }
   }
-
   Widget _buildEmptyState() {
     return ListView(
       padding: const EdgeInsets.all(32),

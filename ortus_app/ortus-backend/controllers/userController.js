@@ -182,27 +182,30 @@ const attachExistingParent = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { parentPhone, parentIin } = req.body;
-
-    if (!parentPhone && !parentIin) {
-      return res
-        .status(400)
-        .json({ message: "parentPhone or parentIin is required" });
-    }
+    const { parentPhone, parentIin, parentId } = req.body;
 
     const student = await User.findById(id);
     if (!student || !student.userType.includes("student")) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    const parentQuery = {
-      userType: { $in: ["parent"] },
-    };
+    let parent;
+    if (parentId) {
+      parent = await User.findById(parentId);
+    } else {
+      if (!parentPhone && !parentIin) {
+        return res
+          .status(400)
+          .json({ message: "parentPhone or parentIin is required" });
+      }
+      const parentQuery = {
+        userType: { $in: ["parent"] },
+      };
+      if (parentPhone) parentQuery.phoneNumber = parentPhone;
+      if (parentIin) parentQuery.iin = parentIin;
+      parent = await User.findOne(parentQuery);
+    }
 
-    if (parentPhone) parentQuery.phoneNumber = parentPhone;
-    if (parentIin) parentQuery.iin = parentIin;
-
-    const parent = await User.findOne(parentQuery);
     if (!parent) {
       return res
         .status(404)
@@ -225,6 +228,35 @@ const attachExistingParent = async (req, res) => {
       student: updatedStudent,
       parent: parent,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getParentsList = async (req, res) => {
+  try {
+    const canView =
+      req.user.userType.includes("manager") ||
+      req.user.userType.includes("director");
+
+    if (!canView) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const { search } = req.query;
+    const filter = { userType: { $in: ["parent"] } };
+
+    if (search) {
+      const regex = new RegExp(search, "i");
+      filter.$or = [{ fullName: regex }, { phoneNumber: regex }];
+    }
+
+    const parents = await User.find(filter)
+      .select("_id fullName phoneNumber iin userType status")
+      .sort({ fullName: 1 })
+      .limit(20);
+
+    res.json(parents);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -521,6 +553,7 @@ module.exports = {
   addChild,
   createParentForStudent,
   attachExistingParent,
+  getParentsList,
   createUserByDirector,
   getPendingStudents,
   assignStudentToGroup,

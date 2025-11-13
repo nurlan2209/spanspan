@@ -329,6 +329,7 @@ class UserService {
     required String studentId,
     String? parentPhone,
     String? parentIin,
+    String? parentId,
   }) async {
     final token = await AuthService().getToken();
     if (token == null) return null;
@@ -342,6 +343,7 @@ class UserService {
       body: json.encode({
         'parentPhone': parentPhone,
         'parentIin': parentIin,
+        'parentId': parentId,
       }),
     );
 
@@ -355,5 +357,26 @@ class UserService {
       throw Exception(body['message'] ?? 'Не удалось прикрепить родителя');
     }
     return null;
+  }
+
+  Future<List<UserData>> searchParents(String query) async {
+    final token = await AuthService().getToken();
+    if (token == null) return [];
+
+    var url = '${ApiConfig.baseUrl}/users/parents';
+    if (query.isNotEmpty) {
+      url += '?search=${Uri.encodeComponent(query)}';
+    }
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((item) => UserData.fromJson(item)).toList();
+    }
+    return [];
   }
 }
