@@ -18,7 +18,6 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   DateTime? _dateOfBirth;
-  double _weight = 50;
   String _role = 'student';
   String? _selectedGroupId;
   bool _isLoading = false;
@@ -126,17 +125,6 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
                   }
                 },
               ),
-              const SizedBox(height: 12),
-              Text('Вес: ${_weight.toStringAsFixed(1)} кг'),
-              Slider(
-                value: _weight,
-                min: 20,
-                max: 150,
-                divisions: 130,
-                label: _weight.toStringAsFixed(1),
-                onChanged: (value) => setState(() => _weight = value),
-                activeColor: AppColors.primary,
-              ),
               if (_role == 'student')
                 FutureBuilder<List<GroupModel>>(
                   future: GroupService().getAllGroups(),
@@ -205,7 +193,6 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
         fullName: _nameController.text,
         password: _passwordController.text,
         dateOfBirth: _dateOfBirth!,
-        weight: _weight,
         groupId: _role == 'student' ? _selectedGroupId : null,
       );
       if (!mounted) return;

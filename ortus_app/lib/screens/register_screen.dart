@@ -19,7 +19,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   DateTime? _dateOfBirth;
-  double _weight = 50.0;
   String? _selectedGroupId;
   bool _isLoading = false;
 
@@ -85,17 +84,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   );
                   if (picked != null) setState(() => _dateOfBirth = picked);
                 },
-              ),
-              const SizedBox(height: 10),
-              Text('Вес: ${_weight.toStringAsFixed(1)} кг'),
-              Slider(
-                value: _weight,
-                min: 20,
-                max: 150,
-                divisions: 130,
-                label: _weight.toStringAsFixed(1),
-                onChanged: (value) => setState(() => _weight = value),
-                activeColor: AppColors.primary,
               ),
               FutureBuilder<List<GroupModel>>(
                 future: GroupService().getAllGroups(),
@@ -165,7 +153,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'fullName': _nameController.text,
         'password': _passwordController.text,
         'dateOfBirth': _dateOfBirth!.toIso8601String(),
-        'weight': _weight,
         'userType': 'student',
         'groupId': _selectedGroupId,
       });

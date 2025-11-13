@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_button.dart';
-import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   @override
@@ -66,25 +65,9 @@ class ProfileScreen extends StatelessWidget {
               'Дата рождения',
               user.dateOfBirth.toLocal().toString().split(' ')[0],
             ),
-            _buildInfoRow(
-              Icons.fitness_center,
-              'Вес',
-              '${user.weight.toStringAsFixed(1)} кг',
-            ),
             if (user.groupId != null)
               _buildInfoRow(Icons.group, 'Группа', user.groupId!),
           ]),
-          SizedBox(height: 20),
-          CustomButton(
-            text: 'Редактировать',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => EditProfileScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
           if (user.isStudent || user.isParent)
             CustomButton(
               text: 'Посещаемость',

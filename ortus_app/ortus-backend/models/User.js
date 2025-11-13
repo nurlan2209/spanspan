@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
   iin: { type: String, required: true, unique: true, length: 12 },
   fullName: { type: String, required: true },
   dateOfBirth: { type: Date, required: true },
-  weight: { type: Number, required: true },
+  weight: { type: Number, default: 0 },
   userType: {
     type: [String],
     enum: [

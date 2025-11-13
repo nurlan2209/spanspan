@@ -27,7 +27,6 @@ const createUserByDirector = async (req, res) => {
       iin,
       fullName,
       dateOfBirth,
-      weight,
       userType,
       password,
       status,
@@ -53,7 +52,6 @@ const createUserByDirector = async (req, res) => {
       iin,
       fullName,
       dateOfBirth,
-      weight: weight ? parseFloat(weight) : 0,
       userType: normalizedRoles,
       status: derivedStatus,
       password,
@@ -70,10 +68,9 @@ const createUserByDirector = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { weight, groupId } = req.body;
+    const { groupId } = req.body;
     const user = await User.findById(req.user._id);
 
-    if (weight) user.weight = weight;
     if (groupId && user.userType.includes("student")) user.groupId = groupId;
 
     await user.save();
@@ -216,7 +213,6 @@ const createStudentByManager = async (req, res) => {
       iin,
       fullName,
       dateOfBirth,
-      weight,
       userType,
       password,
       groupId,
@@ -241,7 +237,6 @@ const createStudentByManager = async (req, res) => {
       iin,
       fullName,
       dateOfBirth,
-      weight,
       userType: [userType],
       status,
       password,

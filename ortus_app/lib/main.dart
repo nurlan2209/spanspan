@@ -9,7 +9,6 @@ import 'screens/profile_screen.dart';
 import 'screens/create_group_screen.dart';
 import 'screens/group_requests_screen.dart';
 import 'screens/create_schedule_screen.dart';
-import 'screens/edit_profile_screen.dart';
 import 'utils/constants.dart';
 import 'screens/mark_attendance_screen.dart';
 import 'screens/news_feed_screen.dart';
@@ -60,7 +59,6 @@ class MyApp extends StatelessWidget {
         '/create-group': (context) => CreateGroupScreen(),
         '/group-requests': (context) => GroupRequestsScreen(),
         '/create-schedule': (context) => CreateScheduleScreen(),
-        '/edit-profile': (context) => EditProfileScreen(),
         '/news': (context) => const NewsFeedScreen(),
         '/mark-attendance': (context) => MarkAttendanceScreen(),
         '/admin-dashboard': (context) => const AdminDashboardScreen(),

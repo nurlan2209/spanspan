@@ -98,7 +98,6 @@ class _AppNavigatorState extends State<AppNavigator> {
         _TabItem('Новые', Icons.person_add, const PendingStudentsScreen()),
         _TabItem('Группы', Icons.groups, const ManagerGroupsScreen()),
         _TabItem('Новости', Icons.article, const NewsFeedScreen()),
-        _TabItem('Статистика', Icons.bar_chart, const AdminDashboardScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];
     }

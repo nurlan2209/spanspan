@@ -243,7 +243,6 @@ class UserService {
     required String fullName,
     required String password,
     required DateTime dateOfBirth,
-    required double weight,
     String? groupId,
   }) async {
     final token = await AuthService().getToken();
@@ -259,7 +258,6 @@ class UserService {
         'fullName': fullName,
         'password': password,
         'dateOfBirth': dateOfBirth.toIso8601String(),
-        'weight': weight,
         'userType': role,
         'groupId': groupId,
       }),
