@@ -36,7 +36,7 @@ class DirectorStaffScreen extends StatelessWidget {
 }
 
 class _StaffListTab extends StatefulWidget {
-  const _StaffListTab({super.key});
+  const _StaffListTab();
 
   @override
   State<_StaffListTab> createState() => _StaffListTabState();
@@ -205,7 +205,6 @@ class _StaffCard extends StatelessWidget {
   final VoidCallback onToggleStatus;
 
   const _StaffCard({
-    super.key,
     required this.staff,
     required this.isUpdating,
     required this.onToggleStatus,

@@ -31,6 +31,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
   };
 
   Future<void> _pickImages() async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final result = await _picker.pickMultiImage(
         imageQuality: 85,
@@ -42,9 +43,9 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка выбора фото: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Ошибка выбора фото: $e')),
+      );
     }
   }
 

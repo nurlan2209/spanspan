@@ -38,6 +38,12 @@ class _ManagerGroupsScreenState extends State<ManagerGroupsScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.white),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openCreateGroup,
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add, color: AppColors.white),
+        label: const Text('Создать группу'),
+      ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         color: AppColors.primary,
@@ -80,11 +86,24 @@ class _ManagerGroupsScreenState extends State<ManagerGroupsScreen> {
                   elevation: 2,
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
                       child: const Icon(Icons.groups, color: AppColors.primary),
                     ),
                     title: Text(group.name),
-                    subtitle: Text('Тренер: ${group.trainerName}'),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Тренер: ${group.trainerName}'),
+                        if (group.trainerPhone != null)
+                          Text(
+                            group.trainerPhone!,
+                            style: const TextStyle(
+                              color: AppColors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -93,5 +112,12 @@ class _ManagerGroupsScreenState extends State<ManagerGroupsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openCreateGroup() async {
+    final created = await Navigator.pushNamed(context, '/create-group');
+    if (created == true && mounted) {
+      await _refresh();
+    }
   }
 }

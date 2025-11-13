@@ -6,7 +6,6 @@ class UserData {
   final String iin;
   final String fullName;
   final DateTime dateOfBirth;
-  final double weight;
   final List<String> userType;
   final String? status;
   final String? groupId;
@@ -21,7 +20,6 @@ class UserData {
     required this.iin,
     required this.fullName,
     required this.dateOfBirth,
-    required this.weight,
     required this.userType,
     this.status,
     this.groupId,
@@ -66,7 +64,6 @@ class UserData {
       dateOfBirth:
           DateTime.tryParse(json['dateOfBirth']?.toString() ?? '') ??
           DateTime.now(),
-      weight: double.tryParse(json['weight']?.toString() ?? '0') ?? 0.0,
       userType: userTypeList,
       status: json['status']?.toString(),
       groupId: resolvedGroupId,

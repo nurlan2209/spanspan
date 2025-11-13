@@ -50,6 +50,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: AppColors.white,
       ),
       initialRoute: '/',
+      debugShowCheckedModeBanner: false,
       routes: {
         '/': (context) => SplashScreen(),
         '/login': (context) => LoginScreen(),

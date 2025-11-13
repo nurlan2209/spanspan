@@ -7,7 +7,6 @@ class UserDto {
   final String iin;
   final String fullName;
   final DateTime dateOfBirth;
-  final double weight;
   final List<String> userType; // ✅ ПЕРЕИМЕНОВАЛ ОБРАТНО
   final String? groupId;
   final List<UserDto>? children; // ✅ ДОБАВИЛ
@@ -19,7 +18,6 @@ class UserDto {
     required this.iin,
     required this.fullName,
     required this.dateOfBirth,
-    required this.weight,
     required this.userType,
     this.groupId,
     this.children,
@@ -57,7 +55,6 @@ class UserDto {
         dateOfBirth:
             DateTime.tryParse(json['dateOfBirth']?.toString() ?? '') ??
             DateTime.now(),
-        weight: double.tryParse(json['weight']?.toString() ?? '0') ?? 0.0,
         userType: userType,
         groupId: json['groupId']?.toString(),
         // ✅ ДОБАВИЛ ПАРСИНГ children
@@ -91,7 +88,6 @@ class UserDto {
     'iin': iin,
     'fullName': fullName,
     'dateOfBirth': dateOfBirth.toIso8601String(),
-    'weight': weight,
     'userType': userType,
     'groupId': groupId,
     'children': children?.map((c) => c.toJson()).toList(),

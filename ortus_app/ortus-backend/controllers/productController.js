@@ -110,7 +110,7 @@ const updateStock = async (req, res) => {
     console.log("Body:", req.body);
     console.log("User:", req.user.userType);
 
-    if (!isManager(req.user)) {
+    if (!isAdmin(req.user)) {
       console.log("❌ Access denied");
       return res.status(403).json({ message: "Only admins can update stock" });
     }

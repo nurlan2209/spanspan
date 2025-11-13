@@ -526,13 +526,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildAnalyticsButtons() {
     final user = context.watch<AuthProvider>().user;
+    final isDirector = user?.hasRole('director') == true;
+    final isAdminOnly = user?.isAdmin == true;
     return Column(
       children: [
-        if (Provider.of<AuthProvider>(
-              context,
-              listen: false,
-            ).user?.hasRole('director') ==
-            true) ...[
+        if (isDirector) ...[
           _buildAnalyticsButton(
             'Создать аккаунт',
             'Тренер или администратор',
@@ -542,14 +540,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        _buildAnalyticsButton(
-          'Управление товарами',
-          'Добавить товар в магазин',
-          Icons.add_shopping_cart,
-          Colors.purple,
-          () => Navigator.pushNamed(context, '/manage-products'),
-        ),
-        const SizedBox(height: 12),
+        if (isAdminOnly) ...[
+          _buildAnalyticsButton(
+            'Управление товарами',
+            'Добавить товар в магазин',
+            Icons.add_shopping_cart,
+            Colors.purple,
+            () => Navigator.pushNamed(context, '/manage-products'),
+          ),
+          const SizedBox(height: 12),
+        ],
         _buildAnalyticsButton(
           'Финансовая аналитика',
           'Доходы, расходы, тренды',

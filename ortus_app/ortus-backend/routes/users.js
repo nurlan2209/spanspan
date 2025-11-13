@@ -10,6 +10,7 @@ const {
   getAllStudents,
   getStaff,
   updateUserStatus,
+  getActiveTrainers,
 } = require("../controllers/userController");
 const { protect } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -24,5 +25,6 @@ router.patch("/:id/assign-group", protect, assignStudentToGroup);
 router.get("/students", protect, getAllStudents);
 router.get("/staff", protect, getStaff);
 router.patch("/:id/status", protect, updateUserStatus);
+router.get("/trainers", protect, getActiveTrainers);
 
 module.exports = router;

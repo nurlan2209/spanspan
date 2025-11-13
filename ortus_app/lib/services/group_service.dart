@@ -41,4 +41,23 @@ class GroupService {
 
     return response.statusCode == 200;
   }
+
+  Future<bool> createGroup({
+    required String name,
+    required String trainerId,
+  }) async {
+    final token = await AuthService().getToken();
+    if (token == null) return false;
+
+    final response = await http.post(
+      Uri.parse('${ApiConfig.groupsUrl}/create'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({'name': name, 'trainerId': trainerId}),
+    );
+
+    return response.statusCode == 201;
+  }
 }

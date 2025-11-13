@@ -1,6 +1,8 @@
 // lib/screens/manage_products_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/product_model.dart';
+import '../providers/auth_provider.dart';
 import '../services/product_service.dart';
 import '../utils/constants.dart';
 import '../widgets/create_product_modal.dart';
@@ -85,15 +87,26 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.black,
-        title: const Text(
-          'Управление товарами',
-          style: TextStyle(color: AppColors.white),
+    final user = context.watch<AuthProvider>().user;
+    final isAdmin = user?.isAdmin ?? false;
+
+    if (!isAdmin) {
+      return Scaffold(
+        appBar: _buildAppBar(),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Раздел доступен только администраторам магазина',
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
-        iconTheme: const IconThemeData(color: AppColors.white),
-      ),
+      );
+    }
+
+    return Scaffold(
+      appBar: _buildAppBar(),
       body: FutureBuilder<List<ProductModel>>(
         future: _productsFuture,
         builder: (context, snapshot) {
@@ -111,7 +124,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                   Icon(
                     Icons.inventory_2_outlined,
                     size: 80,
-                    color: AppColors.grey.withOpacity(0.5),
+                    color: AppColors.grey.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -269,6 +282,17 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: AppColors.black,
+      title: const Text(
+        'Управление товарами',
+        style: TextStyle(color: AppColors.white),
+      ),
+      iconTheme: const IconThemeData(color: AppColors.white),
     );
   }
 }

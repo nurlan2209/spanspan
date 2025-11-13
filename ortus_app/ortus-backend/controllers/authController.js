@@ -63,7 +63,6 @@ const register = async (req, res) => {
       iin,
       fullName,
       dateOfBirth,
-      weight: 0,
       userType: roles,
       status: isStudent ? (groupId ? "active" : "pending") : "active",
       password,

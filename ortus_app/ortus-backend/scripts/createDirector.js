@@ -55,7 +55,6 @@ const run = async () => {
       iin,
       fullName,
       dateOfBirth: new Date(dateOfBirthRaw),
-      weight: 0,
       userType: ["director"],
       status: "active",
       password,

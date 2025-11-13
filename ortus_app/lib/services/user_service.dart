@@ -268,4 +268,21 @@ class UserService {
           'Failed to create student');
     }
   }
+
+  Future<List<UserData>> getActiveTrainers() async {
+    final token = await AuthService().getToken();
+    if (token == null) return [];
+
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/users/trainers'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data.map((item) => UserData.fromJson(item)).toList();
+    }
+
+    return [];
+  }
 }

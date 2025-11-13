@@ -16,15 +16,12 @@ class NewsFeedScreen extends StatefulWidget {
 
 class _NewsFeedScreenState extends State<NewsFeedScreen> {
   String? _selectedCategory;
-  String _selectedType = 'all';
   late Future<List<NewsModel>> _newsFuture;
 
   final categories = {
     null: 'Все',
     'general': 'Общее',
-    'tournament': 'Турниры',
     'event': 'Мероприятия',
-    'announcement': 'Объявления',
   };
 
   @override
@@ -39,7 +36,6 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
       _newsFuture = NewsService().getAllNews(
         category: _selectedCategory,
         groupId: user?.groupId,
-        type: _selectedType == 'all' ? null : _selectedType,
       );
     });
   }
@@ -75,7 +71,6 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
       ),
       body: Column(
         children: [
-          _buildTypeFilter(),
           const SizedBox(height: 8),
           _buildCategoryFilter(),
           Expanded(
@@ -157,35 +152,6 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
     );
   }
 
-  Widget _buildTypeFilter() {
-    const types = {'all': 'Все', 'group': 'Групповые', 'general': 'Общие'};
-
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemBuilder: (context, index) {
-          final key = types.keys.elementAt(index);
-          final label = types[key]!;
-          final isSelected = _selectedType == key;
-          return ChoiceChip(
-            label: Text(label),
-            selected: isSelected,
-            onSelected: (_) {
-              setState(() {
-                _selectedType = key;
-                _loadNews();
-              });
-            },
-          );
-        },
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemCount: types.length,
-      ),
-    );
-  }
-
   Widget _buildNewsCard(NewsModel news) {
     return GestureDetector(
       onTap: () {
@@ -216,7 +182,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       height: 200,
-                      color: AppColors.grey.withOpacity(0.2),
+                      color: AppColors.grey.withValues(alpha: 0.2),
                       child: const Center(child: Icon(Icons.image, size: 50)),
                     );
                   },
@@ -283,7 +249,7 @@ class _NewsFeedScreenState extends State<NewsFeedScreen> {
                           news.newsType == 'general' ? 'Общая' : 'Групповая',
                           style: const TextStyle(fontSize: 10),
                         ),
-                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                       ),
                       const Spacer(),
                       Text(

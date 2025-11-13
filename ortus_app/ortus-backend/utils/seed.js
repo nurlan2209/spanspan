@@ -19,7 +19,6 @@ const seedData = async () => {
     iin: "950101300123",
     fullName: "Иванов Иван Иванович",
     dateOfBirth: new Date("1995-01-01"),
-    weight: 75,
     userType: "trainer",
     password: "password123",
   });
@@ -35,7 +34,6 @@ const seedData = async () => {
     iin: "000101300456",
     fullName: "Петров Петр Петрович",
     dateOfBirth: new Date("2000-01-01"),
-    weight: 65,
     userType: "student",
     password: "password123",
     groupId: group._id,

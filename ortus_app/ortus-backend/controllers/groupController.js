@@ -4,15 +4,26 @@ const User = require("../models/User");
 
 const createGroup = async (req, res) => {
   try {
-    const { name } = req.body;
-
-    if (req.user.userType !== "trainer") {
+    if (!req.user.userType.includes("manager")) {
       return res
         .status(403)
-        .json({ message: "Only trainers can create groups" });
+        .json({ message: "Only managers can create groups" });
     }
 
-    const group = await Group.create({ name, trainerId: req.user._id });
+    const { name, trainerId } = req.body;
+    if (!name || !trainerId) {
+      return res
+        .status(400)
+        .json({ message: "Name and trainerId are required" });
+    }
+
+    const trainer = await User.findById(trainerId);
+    if (!trainer || !trainer.userType.includes("trainer")) {
+      return res.status(400).json({ message: "Invalid trainerId" });
+    }
+
+    const group = await Group.create({ name, trainerId });
+    await group.populate("trainerId", "fullName phoneNumber");
     res.status(201).json(group);
   } catch (error) {
     res.status(500).json({ message: error.message });

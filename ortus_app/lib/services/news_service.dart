@@ -8,14 +8,12 @@ class NewsService {
   Future<List<NewsModel>> getAllNews({
     String? category,
     String? groupId,
-    String? type,
   }) async {
     String url = '${ApiConfig.baseUrl}/news';
 
     final params = <String, String>{};
     if (category != null) params['category'] = category;
     if (groupId != null) params['groupId'] = groupId;
-    if (type != null) params['type'] = type;
 
     if (params.isNotEmpty) {
       url += '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';

@@ -13,6 +13,7 @@ import '../screens/manager/manager_groups_screen.dart';
 import '../screens/manager/pending_students_screen.dart';
 import '../screens/mark_attendance_screen.dart';
 import '../screens/news_feed_screen.dart';
+import '../screens/manage_products_screen.dart';
 import '../screens/photo_reports/photo_report_screen.dart';
 import '../screens/photo_reports/photo_reports_gallery_screen.dart';
 import '../screens/profile_screen.dart';
@@ -79,7 +80,7 @@ class _AppNavigatorState extends State<AppNavigator> {
   }
 
   List<_TabItem> _buildTabsForUser(UserData user) {
-    if (user.hasRole('director') || user.isAdmin) {
+    if (user.hasRole('director')) {
       return [
         _TabItem('Дашборд', Icons.dashboard, const AdminDashboardScreen()),
         _TabItem('Студенты', Icons.school, const DirectorStudentsScreen()),
@@ -89,6 +90,13 @@ class _AppNavigatorState extends State<AppNavigator> {
           Icons.photo_library,
           const PhotoReportsGalleryScreen(),
         ),
+        _TabItem('Профиль', Icons.person, _profileScreen()),
+      ];
+    }
+
+    if (user.isAdmin) {
+      return [
+        _TabItem('Товары', Icons.inventory_2, const ManageProductsScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];
     }

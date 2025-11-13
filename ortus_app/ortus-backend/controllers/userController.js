@@ -6,7 +6,7 @@ const getProfile = async (req, res) => {
     const user = await User.findById(req.user._id)
       .select("-password")
       .populate("groupId")
-      .populate("children", "fullName phoneNumber groupId weight dateOfBirth")
+      .populate("children", "fullName phoneNumber groupId dateOfBirth")
       .populate("parentId", "fullName phoneNumber");
     res.json(user);
   } catch (error) {
@@ -368,6 +368,30 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+const getActiveTrainers = async (req, res) => {
+  try {
+    const canView =
+      req.user.userType.includes("manager") ||
+      req.user.userType.includes("director") ||
+      req.user.userType.includes("admin");
+
+    if (!canView) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const trainers = await User.find({
+      userType: { $in: ["trainer"] },
+      status: "active",
+    })
+      .select("_id fullName phoneNumber iin dateOfBirth userType status")
+      .sort({ fullName: 1 });
+
+    res.json(trainers);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -379,4 +403,5 @@ module.exports = {
   getAllStudents,
   getStaff,
   updateUserStatus,
+  getActiveTrainers,
 };
