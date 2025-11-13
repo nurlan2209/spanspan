@@ -285,4 +285,43 @@ class UserService {
 
     return [];
   }
+
+  Future<UserData?> createParentForStudent({
+    required String studentId,
+    required String phoneNumber,
+    required String iin,
+    required String fullName,
+    required DateTime dateOfBirth,
+    required String password,
+  }) async {
+    final token = await AuthService().getToken();
+    if (token == null) return null;
+
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/users/students/$studentId/create-parent'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'phoneNumber': phoneNumber,
+        'iin': iin,
+        'fullName': fullName,
+        'dateOfBirth': dateOfBirth.toIso8601String(),
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      final data = json.decode(response.body);
+      if (data['student'] != null) {
+        return UserData.fromJson(data['student']);
+      }
+    } else {
+      final body = json.decode(response.body);
+      throw Exception(body['message'] ?? 'Не удалось создать родителя');
+    }
+
+    return null;
+  }
 }

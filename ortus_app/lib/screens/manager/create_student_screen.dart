@@ -18,7 +18,6 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   DateTime? _dateOfBirth;
-  String _role = 'student';
   String? _selectedGroupId;
   bool _isLoading = false;
 
@@ -50,30 +49,8 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Тип аккаунта',
+                'Карточка студента',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: const Text('Студент'),
-                    selected: _role == 'student',
-                    onSelected: (_) => setState(() {
-                      _role = 'student';
-                      _selectedGroupId = null;
-                    }),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Родитель'),
-                    selected: _role == 'parent',
-                    onSelected: (_) => setState(() {
-                      _role = 'parent';
-                      _selectedGroupId = null;
-                    }),
-                  ),
-                ],
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -125,29 +102,27 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
                   }
                 },
               ),
-              if (_role == 'student')
-                FutureBuilder<List<GroupModel>>(
-                  future: GroupService().getAllGroups(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const SizedBox.shrink();
-                    }
-                    return DropdownButtonFormField<String>(
-                      value: _selectedGroupId,
-                      hint: const Text('Назначить группу (опционально)'),
-                      onChanged: (value) =>
-                          setState(() => _selectedGroupId = value),
-                      items: snapshot.data!
-                          .map(
-                            (group) => DropdownMenuItem(
-                              value: group.id,
-                              child: Text(group.name),
-                            ),
-                          )
-                          .toList(),
-                    );
-                  },
-                ),
+              FutureBuilder<List<GroupModel>>(
+                future: GroupService().getAllGroups(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+                return DropdownButtonFormField<String>(
+                  initialValue: _selectedGroupId,
+                    hint: const Text('Назначить группу (опционально)'),
+                    onChanged: (value) => setState(() => _selectedGroupId = value),
+                    items: snapshot.data!
+                        .map(
+                          (group) => DropdownMenuItem(
+                            value: group.id,
+                            child: Text(group.name),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+              ),
               const SizedBox(height: 24),
               _isLoading
                   ? const Center(
@@ -187,13 +162,13 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
     setState(() => _isLoading = true);
     try {
       await UserService().createStudentByManager(
-        role: _role,
+        role: 'student',
         phoneNumber: _phoneController.text,
         iin: _iinController.text,
         fullName: _nameController.text,
         password: _passwordController.text,
         dateOfBirth: _dateOfBirth!,
-        groupId: _role == 'student' ? _selectedGroupId : null,
+        groupId: _selectedGroupId,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

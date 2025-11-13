@@ -32,20 +32,6 @@ class UserData {
   factory UserData.fromJson(Map<String, dynamic> json) {
     debugPrint('🟢🟢🟢 UserData.fromJson ВЫЗВАН 🟢🟢🟢');
 
-    final rawUserType = json['userType'];
-    debugPrint('🔍 rawUserType: $rawUserType, тип: ${rawUserType.runtimeType}');
-
-    List<String> userTypeList;
-    if (rawUserType is List) {
-      userTypeList = List<String>.from(rawUserType.map((e) => e.toString()));
-    } else if (rawUserType is String) {
-      userTypeList = [rawUserType];
-    } else {
-      userTypeList = [];
-    }
-
-    debugPrint('✅ userTypeList: $userTypeList');
-
     String? resolvedGroupId;
     String? resolvedGroupName;
     final groupData = json['groupId'];
@@ -64,13 +50,15 @@ class UserData {
       dateOfBirth:
           DateTime.tryParse(json['dateOfBirth']?.toString() ?? '') ??
           DateTime.now(),
-      userType: userTypeList,
+      userType: _parseRoles(json['userType']),
       status: json['status']?.toString(),
       groupId: resolvedGroupId,
       groupName: resolvedGroupName,
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
       children: null,
-      parent: null,
+      parent: json['parentId'] is Map<String, dynamic>
+          ? UserData._fromPartial(json['parentId'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -79,4 +67,37 @@ class UserData {
   bool get isTrainer => hasRole('trainer');
   bool get isParent => hasRole('parent');
   bool get isAdmin => hasRole('admin');
+
+  static List<String> _parseRoles(dynamic raw) {
+    if (raw is List) {
+      return List<String>.from(raw.map((e) => e.toString()));
+    }
+    if (raw is String) {
+      return [raw];
+    }
+    return <String>[];
+  }
+
+  factory UserData._fromPartial(Map<String, dynamic> json) {
+    return UserData(
+      id: json['_id']?.toString() ?? '',
+      phoneNumber: json['phoneNumber']?.toString() ?? '',
+      iin: json['iin']?.toString() ?? '',
+      fullName: json['fullName']?.toString() ?? '',
+      dateOfBirth:
+          DateTime.tryParse(json['dateOfBirth']?.toString() ?? '') ??
+          DateTime.now(),
+      userType: _parseRoles(
+        json.containsKey('userType') && json['userType'] != null
+            ? json['userType']
+            : ['parent'],
+      ),
+      status: json['status']?.toString(),
+      groupId: null,
+      groupName: null,
+      createdAt: null,
+      children: null,
+      parent: null,
+    );
+  }
 }

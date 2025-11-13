@@ -107,6 +107,72 @@ const addChild = async (req, res) => {
   }
 };
 
+const createParentForStudent = async (req, res) => {
+  try {
+    if (!req.user.userType.includes("manager")) {
+      return res
+        .status(403)
+        .json({ message: "Only managers can create parents for students" });
+    }
+
+    const { id } = req.params;
+    const student = await User.findById(id);
+
+    if (!student || !student.userType.includes("student")) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    if (student.parentId) {
+      return res
+        .status(400)
+        .json({ message: "Parent already attached to this student" });
+    }
+
+    const { phoneNumber, iin, fullName, dateOfBirth, password } = req.body;
+
+    if (!phoneNumber || !iin || !fullName || !dateOfBirth || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const exists = await User.findOne({ $or: [{ phoneNumber }, { iin }] });
+    if (exists) {
+      return res
+        .status(400)
+        .json({ message: "Parent with provided phone or IIN already exists" });
+    }
+
+    const parent = await User.create({
+      phoneNumber,
+      iin,
+      fullName,
+      dateOfBirth,
+      userType: ["parent"],
+      status: "active",
+      password,
+      children: [student._id],
+    });
+
+    student.parentId = parent._id;
+    await student.save();
+
+    const parentSafe = await User.findById(parent._id)
+      .select("-password")
+      .populate("children", "fullName");
+
+    const updatedStudent = await User.findById(id)
+      .select("-password")
+      .populate("parentId", "fullName phoneNumber iin");
+
+    res.status(201).json({
+      message: "Parent created and attached",
+      parent: parentSafe,
+      student: updatedStudent,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getPendingStudents = async (req, res) => {
   try {
     const canManage =
@@ -396,6 +462,7 @@ module.exports = {
   getProfile,
   updateProfile,
   addChild,
+  createParentForStudent,
   createUserByDirector,
   getPendingStudents,
   assignStudentToGroup,
