@@ -18,7 +18,6 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   DateTime? _dateOfBirth;
-  double _weight = 70.0;
   String _selectedRole = 'trainer';
   bool _isLoading = false;
 
@@ -45,7 +44,6 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
         iin: _iinController.text,
         fullName: _nameController.text,
         dateOfBirth: _dateOfBirth!,
-        weight: _weight,
         userType: _selectedRole,
         password: _passwordController.text,
       );
@@ -54,7 +52,11 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Пользователь создан')));
-      Navigator.pop(context);
+      _phoneController.clear();
+      _iinController.clear();
+      _nameController.clear();
+      _passwordController.clear();
+      setState(() => _dateOfBirth = null);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -145,14 +147,6 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
                   if (date != null) setState(() => _dateOfBirth = date);
                 },
                 child: const Text('Выбрать дату'),
-              ),
-              const SizedBox(height: 16),
-              Text('Вес: ${_weight.toStringAsFixed(0)} кг'),
-              Slider(
-                value: _weight,
-                min: 30,
-                max: 150,
-                onChanged: (v) => setState(() => _weight = v),
               ),
               const SizedBox(height: 32),
               if (_isLoading)

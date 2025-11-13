@@ -26,7 +26,6 @@ class UserService {
     required String iin,
     required String fullName,
     required DateTime dateOfBirth,
-    required double weight,
     required String userType,
     required String password,
   }) async {
@@ -42,7 +41,6 @@ class UserService {
         'iin': iin,
         'fullName': fullName,
         'dateOfBirth': dateOfBirth.toIso8601String(),
-        'weight': weight,
         'userType': userType,
         'password': password,
       }),
