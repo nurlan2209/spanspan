@@ -324,4 +324,36 @@ class UserService {
 
     return null;
   }
+
+  Future<UserData?> attachParentToStudent({
+    required String studentId,
+    String? parentPhone,
+    String? parentIin,
+  }) async {
+    final token = await AuthService().getToken();
+    if (token == null) return null;
+
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/users/students/$studentId/attach-parent'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'parentPhone': parentPhone,
+        'parentIin': parentIin,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['student'] != null) {
+        return UserData.fromJson(data['student']);
+      }
+    } else {
+      final body = json.decode(response.body);
+      throw Exception(body['message'] ?? 'Не удалось прикрепить родителя');
+    }
+    return null;
+  }
 }

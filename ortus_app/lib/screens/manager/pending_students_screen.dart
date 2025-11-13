@@ -24,6 +24,8 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
   List<GroupModel> _groups = [];
   bool _isLoading = true;
   bool _isGroupsLoading = false;
+  String _statusFilter = 'all';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -38,7 +40,12 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
   }
 
   Future<void> _loadStudents() async {
-    final students = await _userService.getPendingStudents();
+    final students = await _userService.getStudents(
+      status: _statusFilter == 'all' ? null : _statusFilter,
+      search: _searchController.text.trim().isEmpty
+          ? null
+          : _searchController.text.trim(),
+    );
     if (mounted) {
       setState(() {
         _students = students;
@@ -55,6 +62,12 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
         _isGroupsLoading = false;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _assignStudent(UserData student) async {
@@ -159,7 +172,7 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Новые студенты'),
+        title: const Text('Ученики клуба'),
         backgroundColor: AppColors.black,
         actions: [
           IconButton(
@@ -178,15 +191,56 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                 child: CircularProgressIndicator(color: AppColors.primary),
               )
             : _students.isEmpty
-            ? _buildEmptyState()
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _students.length,
-                itemBuilder: (context, index) => _buildStudentCard(
-                  _students[index],
-                ),
-              ),
+                ? _buildEmptyState()
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _buildSearch(),
+                      const SizedBox(height: 12),
+                      _buildStatusFilters(),
+                      const SizedBox(height: 16),
+                      ..._students.map(_buildStudentCard),
+                    ],
+                  ),
       ),
+    );
+  }
+
+  Widget _buildSearch() {
+    return TextField(
+      controller: _searchController,
+      decoration: InputDecoration(
+        hintText: 'Поиск по ФИО или телефону',
+        prefixIcon: const Icon(Icons.search),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      onChanged: (_) => _loadStudents(),
+    );
+  }
+
+  Widget _buildStatusFilters() {
+    const statuses = {
+      'all': 'Все',
+      'pending': 'Ожидают',
+      'active': 'Активные',
+      'inactive': 'Неактивные',
+    };
+
+    return Wrap(
+      spacing: 8,
+      children: statuses.entries.map((entry) {
+        final selected = _statusFilter == entry.key;
+        return ChoiceChip(
+          label: Text(entry.value),
+          selected: selected,
+          onSelected: (_) {
+            setState(() => _statusFilter = entry.key);
+            _loadStudents();
+          },
+        );
+      }).toList(),
     );
   }
 
@@ -249,8 +303,11 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
         final parentIinController = TextEditingController();
         final parentNameController = TextEditingController();
         final parentPasswordController = TextEditingController();
+        final attachPhoneController = TextEditingController();
+        final attachIinController = TextEditingController();
         DateTime? parentDob;
         bool isCreatingParent = false;
+        bool isAttachingParent = false;
 
         Future<void> submitParent(StateSetter setModalState) async {
           if (!formKey.currentState!.validate() || parentDob == null) {
@@ -288,6 +345,47 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
             }
           } finally {
             setModalState(() => isCreatingParent = false);
+          }
+        }
+
+        Future<void> attachParent(StateSetter setModalState) async {
+          if (attachPhoneController.text.isEmpty &&
+              attachIinController.text.isEmpty) {
+            ScaffoldMessenger.of(this.context).showSnackBar(
+              const SnackBar(
+                content: Text('Укажите телефон или ИИН родителя'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            return;
+          }
+
+          setModalState(() => isAttachingParent = true);
+          try {
+            final updated = await _userService.attachParentToStudent(
+              studentId: student.id,
+              parentPhone: attachPhoneController.text.isEmpty
+                  ? null
+                  : attachPhoneController.text,
+              parentIin: attachIinController.text.isEmpty
+                  ? null
+                  : attachIinController.text,
+            );
+            if (!context.mounted) return;
+            if (updated != null) {
+              Navigator.pop(context, true);
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                SnackBar(
+                  content: Text(e.toString()),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          } finally {
+            setModalState(() => isAttachingParent = false);
           }
         }
 
@@ -370,6 +468,65 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                         ),
                       )
                     else ...[
+                      Card(
+                        color: AppColors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: AppColors.grey.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Прикрепить существующего родителя',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: attachPhoneController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Телефон родителя',
+                                ),
+                                keyboardType: TextInputType.phone,
+                              ),
+                              const SizedBox(height: 12),
+                              TextField(
+                                controller: attachIinController,
+                                decoration:
+                                    const InputDecoration(labelText: 'ИИН'),
+                                keyboardType: TextInputType.number,
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton(
+                                  onPressed: isAttachingParent
+                                      ? null
+                                      : () => attachParent(setModalState),
+                                  child: isAttachingParent
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Text('Прикрепить родителя'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       const Text(
                         'Создать родителя',
                         style: TextStyle(
@@ -503,7 +660,7 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
         Icon(Icons.emoji_people, size: 80, color: AppColors.grey),
         SizedBox(height: 16),
         Text(
-          'Нет новых заявок',
+          'Студенты ещё не добавлены',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 18, color: AppColors.grey),
         ),

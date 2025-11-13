@@ -6,6 +6,7 @@ const {
   createUserByDirector,
   getPendingStudents,
   createParentForStudent,
+  attachExistingParent,
   assignStudentToGroup,
   createStudentByManager,
   getAllStudents,
@@ -26,6 +27,11 @@ router.post(
   "/students/:id/create-parent",
   protect,
   createParentForStudent
+);
+router.post(
+  "/students/:id/attach-parent",
+  protect,
+  attachExistingParent
 );
 router.patch("/:id/assign-group", protect, assignStudentToGroup);
 router.get("/students", protect, getAllStudents);

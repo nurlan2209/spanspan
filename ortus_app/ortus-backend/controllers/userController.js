@@ -173,6 +173,63 @@ const createParentForStudent = async (req, res) => {
   }
 };
 
+const attachExistingParent = async (req, res) => {
+  try {
+    if (!req.user.userType.includes("manager")) {
+      return res
+        .status(403)
+        .json({ message: "Only managers can attach parents" });
+    }
+
+    const { id } = req.params;
+    const { parentPhone, parentIin } = req.body;
+
+    if (!parentPhone && !parentIin) {
+      return res
+        .status(400)
+        .json({ message: "parentPhone or parentIin is required" });
+    }
+
+    const student = await User.findById(id);
+    if (!student || !student.userType.includes("student")) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const parentQuery = {
+      userType: { $in: ["parent"] },
+    };
+
+    if (parentPhone) parentQuery.phoneNumber = parentPhone;
+    if (parentIin) parentQuery.iin = parentIin;
+
+    const parent = await User.findOne(parentQuery);
+    if (!parent) {
+      return res
+        .status(404)
+        .json({ message: "Parent with provided data not found" });
+    }
+
+    student.parentId = parent._id;
+    await student.save();
+
+    await User.findByIdAndUpdate(parent._id, {
+      $addToSet: { children: student._id },
+    });
+
+    const updatedStudent = await User.findById(id)
+      .select("-password")
+      .populate("parentId", "fullName phoneNumber iin");
+
+    res.json({
+      message: "Parent attached successfully",
+      student: updatedStudent,
+      parent: parent,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getPendingStudents = async (req, res) => {
   try {
     const canManage =
@@ -463,6 +520,7 @@ module.exports = {
   updateProfile,
   addChild,
   createParentForStudent,
+  attachExistingParent,
   createUserByDirector,
   getPendingStudents,
   assignStudentToGroup,
