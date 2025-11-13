@@ -30,7 +30,6 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        // ✅ ЗАМЕНИТЕ AuthProvider на AuthProviderV2
         ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: const MyApp(),
