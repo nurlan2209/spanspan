@@ -7,7 +7,8 @@ const getProfile = async (req, res) => {
       .select("-password")
       .populate("groupId")
       .populate("children", "fullName phoneNumber groupId dateOfBirth")
-      .populate("parentId", "fullName phoneNumber");
+      .populate("parentId", "fullName phoneNumber")
+      .populate("parents", "fullName phoneNumber");
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -99,6 +100,7 @@ const addChild = async (req, res) => {
 
     await User.findByIdAndUpdate(childId, {
       parentId: req.user._id,
+      $addToSet: { parents: req.user._id },
     });
 
     res.json({ message: "Child added successfully" });
@@ -153,6 +155,7 @@ const createParentForStudent = async (req, res) => {
     });
 
     student.parentId = parent._id;
+    student.parents = [parent._id];
     await student.save();
 
     const parentSafe = await User.findById(parent._id)
@@ -213,6 +216,10 @@ const attachExistingParent = async (req, res) => {
     }
 
     student.parentId = parent._id;
+    student.parents = student.parents || [];
+    if (!student.parents.map(String).includes(parent._id.toString())) {
+      student.parents.push(parent._id);
+    }
     await student.save();
 
     await User.findByIdAndUpdate(parent._id, {
@@ -413,12 +420,22 @@ const getAllStudents = async (req, res) => {
       req.user.userType.includes("director") ||
       req.user.userType.includes("manager") ||
       req.user.userType.includes("admin");
+    const isTrainer = req.user.userType.includes("trainer");
+    const { search, status, groupId } = req.query;
 
     if (!canView) {
-      return res.status(403).json({ message: "Access denied" });
+      if (!isTrainer || !groupId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const group = await Group.findById(groupId).select("trainerId");
+      if (
+        !group ||
+        group.trainerId?.toString() !== req.user._id.toString()
+      ) {
+        return res.status(403).json({ message: "Access denied" });
+      }
     }
 
-    const { search, status, groupId } = req.query;
     const filter = {
       userType: { $in: ["student"] },
     };
@@ -440,6 +457,7 @@ const getAllStudents = async (req, res) => {
       .select("-password")
       .populate("groupId", "name")
       .populate("parentId", "fullName phoneNumber")
+      .populate("parents", "fullName phoneNumber")
       .sort({ fullName: 1 });
 
     res.json(students);

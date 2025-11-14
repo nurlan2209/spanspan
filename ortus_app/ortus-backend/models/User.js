@@ -29,12 +29,24 @@ const userSchema = new mongoose.Schema({
     ref: "Group",
     default: null,
   },
-  children: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-  ],
+  children: {
+    type: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    default: undefined,
+  },
+  parents: {
+    type: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    default: undefined,
+  },
   parentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

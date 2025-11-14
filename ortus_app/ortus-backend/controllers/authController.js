@@ -67,6 +67,7 @@ const register = async (req, res) => {
       status: isStudent ? (groupId ? "active" : "pending") : "active",
       password,
       parentId: parentId || null,
+      parents: parentId ? [parentId] : undefined,
     });
 
     if (parentId) {
@@ -114,7 +115,8 @@ const login = async (req, res) => {
     const user = await User.findOne({ phoneNumber })
       .populate("groupId")
       .populate("children", "fullName phoneNumber groupId")
-      .populate("parentId", "fullName phoneNumber");
+      .populate("parentId", "fullName phoneNumber")
+      .populate("parents", "fullName phoneNumber");
 
     if (user && (await user.matchPassword(password))) {
       const token = generateToken(user._id);

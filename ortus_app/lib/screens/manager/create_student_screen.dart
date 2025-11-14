@@ -3,6 +3,7 @@ import '../../models/group_model.dart';
 import '../../services/group_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/date_picker_helper.dart';
 
 class CreateStudentScreen extends StatefulWidget {
   const CreateStudentScreen({super.key});
@@ -91,7 +92,7 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
                 ),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
-                  final picked = await showDatePicker(
+                  final picked = await showAppDatePicker(
                     context: context,
                     initialDate: DateTime(2010),
                     firstDate: DateTime(1950),

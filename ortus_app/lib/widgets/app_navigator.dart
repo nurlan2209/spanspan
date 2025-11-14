@@ -19,6 +19,7 @@ import '../screens/photo_reports/photo_reports_gallery_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/schedule_list_screen.dart';
 import '../screens/shop_screen.dart';
+import '../screens/trainer/trainer_groups_screen.dart';
 import '../screens/common/placeholder_screen.dart';
 import '../utils/constants.dart';
 
@@ -118,7 +119,7 @@ class _AppNavigatorState extends State<AppNavigator> {
           const ScheduleListScreen(),
         ),
         _TabItem('Посещаемость', Icons.fact_check, MarkAttendanceScreen()),
-        _TabItem('Новости', Icons.article, const NewsFeedScreen()),
+        _TabItem('Группы', Icons.groups, const TrainerGroupsScreen()),
         _TabItem('Фото', Icons.camera_alt, const PhotoReportScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];

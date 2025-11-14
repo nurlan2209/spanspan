@@ -7,6 +7,7 @@ import '../../services/group_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/date_formatter.dart';
+import '../../utils/date_picker_helper.dart';
 import '../../widgets/custom_button.dart';
 
 class PendingStudentsScreen extends StatefulWidget {
@@ -163,8 +164,18 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
     if (user == null || !user.hasRole('manager')) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Новые студенты'),
           backgroundColor: AppColors.black,
+          title: const Text(
+            'Новые студенты',
+            style: TextStyle(
+              color: Colors.white, // белый цвет текста
+            ),
+          ),
+          iconTheme: const IconThemeData(
+            color: Colors.white, // если есть иконка "назад" и т.п.
+          ),
+          foregroundColor:
+              Colors.white, // дефолтный цвет текста/иконок в AppBar
         ),
         body: const Center(child: Text('Доступно только менеджерам')),
       );
@@ -175,12 +186,16 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
         title: const Text('Ученики клуба'),
         backgroundColor: AppColors.black,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person_add),
+          _buildWhiteActionButton(
+            icon: Icons.person_add,
             onPressed: () => Navigator.pushNamed(context, '/create-student')
                 .then((_) => _loadStudents()),
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
+          _buildWhiteActionButton(
+            icon: Icons.refresh,
+            onPressed: _loadData,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
@@ -202,6 +217,29 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                       ..._students.map(_buildStudentCard),
                     ],
                   ),
+      ),
+    );
+  }
+
+  Widget _buildWhiteActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      child: Material(
+        color: AppColors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 1,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            width: 40,
+            height: 40,
+            child: Icon(icon, color: AppColors.primary, size: 20),
+          ),
+        ),
       ),
     );
   }
@@ -638,7 +676,7 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                                 ),
                                 TextButton(
                                   onPressed: () async {
-                                    final picked = await showDatePicker(
+                                    final picked = await showAppDatePicker(
                                       context: context,
                                       initialDate: DateTime(1990, 1, 1),
                                       firstDate: DateTime(1950),

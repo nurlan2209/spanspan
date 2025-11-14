@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/analytics_service.dart';
 import '../utils/constants.dart';
-import 'financial_analytics_screen.dart';
 import '../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'attendance_analytics_admin_screen.dart';
@@ -55,7 +54,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             final data = snapshot.data!;
             final overview = data['overview'];
-            final currentMonth = data['currentMonth'];
             final recentAttendance = data['recentAttendance'];
             final highlights = data['highlights'] ?? {};
 
@@ -71,8 +69,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 const SizedBox(height: 12),
                 _buildOverviewCards(overview),
                 const SizedBox(height: 24),
-                _buildCurrentMonthCard(currentMonth),
-                const SizedBox(height: 20),
                 _buildRecentAttendanceCard(recentAttendance),
                 const SizedBox(height: 24),
                 _buildHighlights(highlights),
@@ -170,10 +166,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildMiniCard(
-                'Долги',
-                '${overview['unpaidPayments']}',
-                Icons.payment,
-                Colors.red,
+                'Студенты в ожидании',
+                '${overview['pendingStudents']}',
+                Icons.timelapse,
+                Colors.orange,
               ),
             ),
           ],
@@ -181,15 +177,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(
-              child: _buildMiniCard(
-                'Pending студенты',
-                '${overview['pendingStudents']}',
-                Icons.timelapse,
-                Colors.orange,
-              ),
-            ),
-            const SizedBox(width: 12),
             Expanded(
               child: _buildMiniCard(
                 'Заказы в ожидании',
@@ -388,72 +375,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildCurrentMonthCard(Map<String, dynamic> currentMonth) {
-    final revenue = currentMonth['revenue'];
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.green.shade400, Colors.green.shade700],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.trending_up,
-                    color: AppColors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Доход текущего месяца',
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '${revenue.toStringAsFixed(0)} ₸',
-              style: const TextStyle(
-                color: AppColors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'От абонементов',
-              style: TextStyle(
-                color: AppColors.white.withOpacity(0.8),
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildRecentAttendanceCard(Map<String, dynamic> recentAttendance) {
     final total = recentAttendance['total'];
     final present = recentAttendance['present'];
@@ -526,20 +447,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildAnalyticsButtons() {
     final user = context.watch<AuthProvider>().user;
-    final isDirector = user?.hasRole('director') == true;
     final isAdminOnly = user?.isAdmin == true;
     return Column(
       children: [
-        if (isDirector) ...[
-          _buildAnalyticsButton(
-            'Создать аккаунт',
-            'Тренер или администратор',
-            Icons.person_add,
-            Colors.indigo,
-            () => Navigator.pushNamed(context, '/create-user'),
-          ),
-          const SizedBox(height: 12),
-        ],
         if (isAdminOnly) ...[
           _buildAnalyticsButton(
             'Управление товарами',
@@ -550,21 +460,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        _buildAnalyticsButton(
-          'Финансовая аналитика',
-          'Доходы, расходы, тренды',
-          Icons.attach_money,
-          Colors.green,
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const FinancialAnalyticsScreen(),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
         _buildAnalyticsButton(
           'Аналитика посещаемости',
           'Статистика по группам и студентам',
@@ -582,7 +477,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(height: 12),
         _buildAnalyticsButton(
           'Сравнение групп',
-          'Доходы и посещаемость по группам',
+          'Посещаемость и активность по группам',
           Icons.compare_arrows,
           Colors.orange,
           () {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart'; // ❌ УДАЛИТЕ ЭТУ СТРОКУ
 // import 'providers/auth_provider_v2.dart'; // ✅ ОСТАВЬТЕ ТОЛЬКО ЭТУ
@@ -44,9 +45,29 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: AppStrings.appName,
+      locale: const Locale('ru', 'RU'),
+      supportedLocales: const [
+        Locale('ru', 'RU'),
+        Locale('en', 'US'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         primaryColor: AppColors.primary,
         scaffoldBackgroundColor: AppColors.white,
+        dialogBackgroundColor: AppColors.white,
+        datePickerTheme: const DatePickerThemeData(
+          backgroundColor: AppColors.white,
+          headerBackgroundColor: AppColors.white,
+          surfaceTintColor: Colors.white,
+        ),
+        colorScheme: ColorScheme.fromSwatch().copyWith(
+          primary: AppColors.primary,
+          onSurface: AppColors.black,
+        ),
       ),
       initialRoute: '/',
       debugShowCheckedModeBanner: false,

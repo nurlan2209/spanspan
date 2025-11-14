@@ -13,25 +13,27 @@ class DirectorStaffScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: AppColors.black,
-          title: const Text(
-            'Сотрудники',
-            style: TextStyle(color: AppColors.white),
+          length: 2,
+          child: Scaffold(
+            appBar: AppBar(
+              backgroundColor: AppColors.black,
+              title: const Text(
+                'Сотрудники',
+                style: TextStyle(color: AppColors.white),
+              ),
+              iconTheme: const IconThemeData(color: AppColors.white),
+              bottom: const TabBar(
+                labelColor: AppColors.white,
+                unselectedLabelColor: AppColors.white,
+                tabs: [
+                  Tab(text: 'Список'),
+                  Tab(text: 'Создать аккаунт'),
+                ],
+              ),
+            ),
+            body: const TabBarView(children: [_StaffListTab(), CreateUserScreen()]),
           ),
-          iconTheme: const IconThemeData(color: AppColors.white),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Список'),
-              Tab(text: 'Создать аккаунт'),
-            ],
-          ),
-        ),
-        body: const TabBarView(children: [_StaffListTab(), CreateUserScreen()]),
-      ),
-    );
+        );
   }
 }
 
@@ -168,7 +170,7 @@ class _StaffListTabState extends State<_StaffListTab> {
     );
   }
 
-  Widget _buildRoleFilters() {
+Widget _buildRoleFilters() {
     final roles = {
       'all': 'Все',
       'trainer': 'Тренеры',
@@ -182,11 +184,25 @@ class _StaffListTabState extends State<_StaffListTab> {
       child: Row(
         children: roles.entries.map((entry) {
           final isSelected = _roleFilter == entry.key;
+          final borderColor = AppColors.grey.withOpacity(0.4);
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
-              label: Text(entry.value),
+              checkmarkColor: AppColors.primary,
+              label: Text(
+                entry.value,
+                style: TextStyle(
+                  color: isSelected ? AppColors.primary : AppColors.black,
+                ),
+              ),
               selected: isSelected,
+              backgroundColor: Colors.white,
+              selectedColor: Colors.white,
+              shape: StadiumBorder(
+                side: BorderSide(
+                  color: isSelected ? AppColors.primary : borderColor,
+                ),
+              ),
               onSelected: (_) {
                 setState(() => _roleFilter = entry.key);
                 _loadStaff();
@@ -197,6 +213,7 @@ class _StaffListTabState extends State<_StaffListTab> {
       ),
     );
   }
+
 }
 
 class _StaffCard extends StatelessWidget {
@@ -211,97 +228,99 @@ class _StaffCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    Widget build(BuildContext context) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 2,
+          color: Colors.white, // белый фон карточки
+          surfaceTintColor: Colors.transparent, // чтобы M3 не тонировал цвет
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  child: Text(
-                    staff.fullName.isNotEmpty
-                        ? staff.fullName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(color: AppColors.primary),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      child: Text(
+                        staff.fullName.isNotEmpty
+                            ? staff.fullName[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(color: AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            staff.fullName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            staff.userType.join(', '),
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (staff.groupName != null)
+                      Chip(
+                        label: Text(staff.groupName!),
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      ),
+                    const SizedBox(width: 8),
+                    _StatusPill(status: staff.status ?? 'active'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _InfoRow(
+                  icon: Icons.phone,
+                  label: 'Телефон',
+                  value: staff.phoneNumber,
+                ),
+                _InfoRow(icon: Icons.badge, label: 'ИИН', value: staff.iin),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton(
+                    onPressed: isUpdating ? null : onToggleStatus,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: staff.status == 'inactive'
+                          ? Colors.green
+                          : Colors.red,
+                      foregroundColor: AppColors.white,
+                    ),
+                    child: isUpdating
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.white,
+                            ),
+                          )
+                        : Text(
+                            staff.status == 'inactive'
+                                ? 'Активировать'
+                                : 'Деактивировать',
+                          ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        staff.fullName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        staff.userType.join(', '),
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (staff.groupName != null)
-                  Chip(
-                    label: Text(staff.groupName!),
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  ),
-                const SizedBox(width: 8),
-                _StatusPill(status: staff.status ?? 'active'),
               ],
             ),
-            const SizedBox(height: 8),
-            _InfoRow(
-              icon: Icons.phone,
-              label: 'Телефон',
-              value: staff.phoneNumber,
-            ),
-            _InfoRow(icon: Icons.badge, label: 'ИИН', value: staff.iin),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton(
-                onPressed: isUpdating ? null : onToggleStatus,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: staff.status == 'inactive'
-                      ? Colors.green
-                      : Colors.red,
-                  foregroundColor: AppColors.white,
-                ),
-                child: isUpdating
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.white,
-                        ),
-                      )
-                    : Text(
-                        staff.status == 'inactive'
-                            ? 'Активировать'
-                            : 'Деактивировать',
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+        );
+      }
 }
 
 class _StatusPill extends StatelessWidget {

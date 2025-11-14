@@ -4,6 +4,7 @@ import '../models/attendance_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/attendance_service.dart';
 import '../utils/constants.dart';
+import '../utils/date_picker_helper.dart';
 
 class AttendanceAnalyticsScreen extends StatefulWidget {
   final String? studentId;
@@ -427,7 +428,7 @@ class _AttendanceAnalyticsScreenState extends State<AttendanceAnalyticsScreen> {
   }
 
   void _selectStartDate() async {
-    final date = await showDatePicker(
+    final date = await showAppDatePicker(
       context: context,
       initialDate: _startDate ?? DateTime.now(),
       firstDate: DateTime(2020),
@@ -440,7 +441,7 @@ class _AttendanceAnalyticsScreenState extends State<AttendanceAnalyticsScreen> {
   }
 
   void _selectEndDate() async {
-    final date = await showDatePicker(
+    final date = await showAppDatePicker(
       context: context,
       initialDate: _endDate ?? DateTime.now(),
       firstDate: _startDate ?? DateTime(2020),

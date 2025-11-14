@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/group_service.dart';
 import '../models/group_model.dart';
 import '../utils/constants.dart';
+import '../utils/date_picker_helper.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -76,7 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
-                  DateTime? picked = await showDatePicker(
+                  DateTime? picked = await showAppDatePicker(
                     context: context,
                     initialDate: DateTime.now(),
                     firstDate: DateTime(1950),

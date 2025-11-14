@@ -7,7 +7,9 @@ import '../providers/auth_provider.dart';
 import '../services/attendance_service.dart';
 import '../services/group_service.dart';
 import '../services/schedule_service.dart';
+import '../services/training_session_service.dart';
 import '../utils/constants.dart';
+import '../utils/date_picker_helper.dart';
 import '../widgets/custom_button.dart';
 
 class MarkAttendanceScreen extends StatefulWidget {
@@ -23,6 +25,9 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   DateTime _selectedDate = DateTime.now();
   List<AttendanceModel> _attendanceRecords = [];
   bool _isLoading = false;
+  bool _attendanceAllowed = true;
+  bool _checkingGate = false;
+  final _sessionService = TrainingSessionService();
 
   final statuses = {
     'present': 'Присутствовал',
@@ -31,6 +36,12 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     'competition': 'Соревнования',
     'excused': 'Уважительная',
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAttendanceAccess();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +66,23 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
             if (_selectedGroupId != null) _buildScheduleSelector(),
             const SizedBox(height: 16),
             _buildDateSelector(),
+            if (_isTodaySelected && _selectedScheduleId != null) ...[
+              const SizedBox(height: 12),
+              _checkingGate
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : !_attendanceAllowed
+                      ? _buildLockedMessage()
+                      : _buildGateInfo(),
+            ],
             const SizedBox(height: 24),
-            if (_selectedGroupId != null && _selectedScheduleId != null)
+            if (_selectedGroupId != null &&
+                _selectedScheduleId != null &&
+                _canWorkWithAttendance)
               Center(
                 child: CustomButton(
                   text: _attendanceRecords.isEmpty
@@ -65,12 +91,23 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                   onPressed: _loadOrCreateAttendance,
                 ),
               ),
+            if (_selectedGroupId != null &&
+                _selectedScheduleId != null &&
+                !_canWorkWithAttendance &&
+                !_checkingGate)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Чтобы отметить посещаемость сегодня, сначала начните тренировку через раздел "Расписание".',
+                  style: TextStyle(color: Colors.red.shade400),
+                ),
+              ),
             const SizedBox(height: 24),
             if (_isLoading)
               const Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
               )
-            else if (_attendanceRecords.isNotEmpty)
+            else if (_attendanceRecords.isNotEmpty && _canWorkWithAttendance)
               _buildAttendanceList(),
           ],
         ),
@@ -163,6 +200,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                   _selectedScheduleId = val;
                   _attendanceRecords = [];
                 });
+                _checkAttendanceAccess();
               },
             );
           },
@@ -182,7 +220,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
         const SizedBox(height: 8),
         InkWell(
           onTap: () async {
-            final date = await showDatePicker(
+            final date = await showAppDatePicker(
               context: context,
               initialDate: _selectedDate,
               firstDate: DateTime.now().subtract(const Duration(days: 90)),
@@ -193,6 +231,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 _selectedDate = date;
                 _attendanceRecords = [];
               });
+              _checkAttendanceAccess();
             }
           },
           child: Container(
@@ -215,6 +254,88 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
         ),
       ],
     );
+  }
+
+  bool get _isTodaySelected =>
+      _selectedDate.year == DateTime.now().year &&
+      _selectedDate.month == DateTime.now().month &&
+      _selectedDate.day == DateTime.now().day;
+
+  bool get _canWorkWithAttendance => !_isTodaySelected || _attendanceAllowed;
+
+  Widget _buildLockedMessage() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_clock, color: Colors.red.shade400),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Начните тренировку в расписании, чтобы открыть отметку посещаемости за сегодня.',
+              style: TextStyle(color: Colors.red.shade400),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGateInfo() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Row(
+        children: const [
+          Icon(Icons.check_circle, color: Colors.green),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Тренировка начата — можно отмечать посещаемость.',
+              style: TextStyle(color: Colors.green),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _checkAttendanceAccess() async {
+    if (!_isTodaySelected || _selectedScheduleId == null) {
+      setState(() {
+        _attendanceAllowed = true;
+        _checkingGate = false;
+      });
+      return;
+    }
+    setState(() => _checkingGate = true);
+    try {
+      final allowed = await _sessionService.hasSessionStarted(
+        _selectedScheduleId!,
+        _selectedDate,
+      );
+      if (!mounted) return;
+      setState(() {
+        _attendanceAllowed = allowed;
+        _checkingGate = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _attendanceAllowed = true;
+        _checkingGate = false;
+      });
+    }
   }
 
   Widget _buildAttendanceList() {
@@ -313,6 +434,14 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
   void _loadOrCreateAttendance() async {
     if (_selectedGroupId == null || _selectedScheduleId == null) return;
+    if (!_canWorkWithAttendance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Начните тренировку перед отметкой посещаемости.'),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 

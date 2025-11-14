@@ -76,7 +76,17 @@ class ProfileScreen extends StatelessWidget {
               },
               color: Colors.blue,
             ),
-          SizedBox(height: 12),
+          if (user.isStudent || user.isParent) const SizedBox(height: 12),
+          if (user.isTrainer) ...[
+            CustomButton(
+              text: 'Новости клуба',
+              onPressed: () {
+                Navigator.pushNamed(context, '/news');
+              },
+              color: AppColors.primary,
+            ),
+            const SizedBox(height: 12),
+          ],
           CustomButton(
             text: 'Выйти',
             onPressed: () {

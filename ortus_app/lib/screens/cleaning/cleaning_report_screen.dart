@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/cleaning_report_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/date_picker_helper.dart';
 
 class CleaningReportScreen extends StatefulWidget {
   const CleaningReportScreen({super.key});
@@ -39,7 +40,7 @@ class _CleaningReportScreenState extends State<CleaningReportScreen> {
   }
 
   Future<void> _selectDate() async {
-    final picked = await showDatePicker(
+    final picked = await showAppDatePicker(
       context: context,
       initialDate: _selectedDateTime,
       firstDate: DateTime.now().subtract(const Duration(days: 7)),

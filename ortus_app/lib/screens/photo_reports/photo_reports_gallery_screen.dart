@@ -4,6 +4,7 @@ import '../../models/photo_report_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/photo_report_service.dart';
 import '../../utils/constants.dart';
+import '../../utils/date_picker_helper.dart';
 
 class PhotoReportsGalleryScreen extends StatefulWidget {
   const PhotoReportsGalleryScreen({super.key});
@@ -43,7 +44,7 @@ class _PhotoReportsGalleryScreenState extends State<PhotoReportsGalleryScreen> {
 
   Future<void> _pickDate({required bool isFrom}) async {
     final initial = isFrom ? _dateFrom : _dateTo;
-    final picked = await showDatePicker(
+    final picked = await showAppDatePicker(
       context: context,
       initialDate: initial ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
