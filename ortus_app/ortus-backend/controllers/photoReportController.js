@@ -1,6 +1,8 @@
 const PhotoReport = require("../models/PhotoReport");
 const Schedule = require("../models/Schedule");
 const CleaningReport = require("../models/CleaningReport");
+const TrainingSession = require("../models/TrainingSession");
+const { normalizeDate } = require("../utils/dateUtils");
 
 const allowedTypes = ["training_before", "training_after", "cleaning"];
 
@@ -77,18 +79,32 @@ const createPhotoReport = async (req, res) => {
 
     let relatedModel = null;
 
+    let scheduleDocument = null;
+
     if (relatedId) {
       relatedModel = type === "cleaning" ? "CleaningReport" : "Schedule";
       if (relatedModel === "Schedule") {
-        const schedule = await Schedule.findById(relatedId);
+        const schedule = await Schedule.findById(relatedId).populate({
+          path: "groupId",
+          select: "trainerId",
+        });
         if (!schedule) {
           return res.status(404).json({ message: "Schedule not found" });
         }
 
+        if (!schedule.groupId || !schedule.groupId.trainerId) {
+          return res.status(400).json({
+            message:
+              "Schedule is missing trainer information. Обратитесь к администратору.",
+          });
+        }
+
+        scheduleDocument = schedule;
+
         if (
-          schedule.trainerId &&
+          schedule.groupId.trainerId &&
           !isAdminOrDirector &&
-          schedule.trainerId.toString() !== req.user._id.toString()
+          schedule.groupId.trainerId.toString() !== req.user._id.toString()
         ) {
           return res.status(403).json({
             message: "Cannot submit photo report for another trainer",
@@ -120,6 +136,31 @@ const createPhotoReport = async (req, res) => {
     });
 
     await report.populate("authorId", "fullName userType");
+
+    if (
+      scheduleDocument &&
+      ["training_before", "training_after"].includes(type)
+    ) {
+      const sessionDate = normalizeDate(report.createdAt || new Date());
+      if (sessionDate) {
+        await TrainingSession.findOneAndUpdate(
+          {
+            scheduleId: scheduleDocument._id,
+            sessionDate,
+          },
+          {
+            $setOnInsert: {
+              groupId: scheduleDocument.groupId._id,
+              trainerId: scheduleDocument.groupId.trainerId,
+            },
+            ...(type === "training_before"
+              ? { beforePhotoReportId: report._id }
+              : { afterPhotoReportId: report._id }),
+          },
+          { upsert: true }
+        );
+      }
+    }
 
     res.status(201).json(report);
   } catch (error) {

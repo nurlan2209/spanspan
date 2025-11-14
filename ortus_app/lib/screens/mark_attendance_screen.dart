@@ -45,8 +45,6 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthProvider>(context).user;
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -139,7 +137,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 .toList();
 
             return DropdownButtonFormField<String>(
-              value: _selectedGroupId,
+              initialValue: _selectedGroupId,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -211,7 +209,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
             }
 
             return DropdownButtonFormField<String>(
-              value: currentValue,
+              initialValue: currentValue,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -507,6 +505,8 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       record.id,
       newStatus,
     );
+
+    if (!mounted) return;
 
     if (success) {
       setState(() {

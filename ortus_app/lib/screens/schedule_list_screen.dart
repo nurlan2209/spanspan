@@ -44,15 +44,23 @@ class _ScheduleListScreenState extends State<ScheduleListScreen> {
     final todayIndex = _today.weekday - 1;
     if (todayIndex < 0) return;
     final todays = _schedules.where((s) => s.dayOfWeek == todayIndex).toList();
-
-    final Map<String, TrainingSessionStatus> map = {};
-    for (final schedule in todays) {
-      map[schedule.id] =
-          await _sessionService.getStatus(schedule.id, _today);
+    if (todays.isEmpty) {
+      if (mounted) setState(() => _todayStatuses = {});
+      return;
     }
 
-    if (mounted) {
-      setState(() => _todayStatuses = map);
+    try {
+      final statuses = await _sessionService.getStatuses(
+        todays.map((s) => s.id).toList(),
+        _today,
+      );
+      if (mounted) {
+        setState(() => _todayStatuses = statuses);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showSnack('Не удалось обновить статусы тренировок: $e');
+      setState(() => _todayStatuses = {});
     }
   }
 
@@ -89,9 +97,13 @@ class _ScheduleListScreenState extends State<ScheduleListScreen> {
       );
       return;
     }
-    await _sessionService.startSession(schedule.id, _today);
-    await _loadTodayStatuses();
-    _showSnack('Тренировка начата, можно отмечать посещаемость.');
+    try {
+      await _sessionService.startSession(schedule.id, _today);
+      await _loadTodayStatuses();
+      _showSnack('Тренировка начата, можно отмечать посещаемость.');
+    } catch (e) {
+      _showSnack(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   Future<void> _handleFinish(ScheduleModel schedule) async {
@@ -99,9 +111,13 @@ class _ScheduleListScreenState extends State<ScheduleListScreen> {
       _showSnack('Завершить тренировку можно после её начала.');
       return;
     }
-    await _sessionService.finishSession(schedule.id, _today);
-    await _loadTodayStatuses();
-    _showSnack('Тренировка завершена.');
+    try {
+      await _sessionService.finishSession(schedule.id, _today);
+      await _loadTodayStatuses();
+      _showSnack('Тренировка завершена.');
+    } catch (e) {
+      _showSnack(e.toString().replaceFirst('Exception: ', ''));
+    }
   }
 
   void _showSnack(String message) {
@@ -288,7 +304,7 @@ class _ScheduleCard extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                backgroundColor: _statusColor.withOpacity(0.1),
+                backgroundColor: _statusColor.withValues(alpha: 0.1),
               ),
             ),
             if (showControls) ...[
@@ -341,7 +357,6 @@ class _ScheduleCard extends StatelessWidget {
       case TrainingSessionStatus.finished:
         return Colors.green;
       case TrainingSessionStatus.notStarted:
-      default:
         return AppColors.grey;
     }
   }
@@ -353,7 +368,6 @@ class _ScheduleCard extends StatelessWidget {
       case TrainingSessionStatus.finished:
         return 'Завершено';
       case TrainingSessionStatus.notStarted:
-      default:
         return 'Не начато';
     }
   }

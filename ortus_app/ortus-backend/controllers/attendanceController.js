@@ -3,6 +3,8 @@ const Schedule = require("../models/Schedule");
 const Group = require("../models/Group");
 const User = require("../models/User");
 const PhotoReport = require("../models/PhotoReport");
+const TrainingSession = require("../models/TrainingSession");
+const { getDayRange, normalizeDate } = require("../utils/dateUtils");
 
 // Создать записи посещаемости для группы на дату (тренер)
 const createAttendanceForGroup = async (req, res) => {
@@ -14,6 +16,12 @@ const createAttendanceForGroup = async (req, res) => {
     }
 
     const { groupId, scheduleId, date } = req.body;
+
+    if (!date) {
+      return res
+        .status(400)
+        .json({ message: "Дата тренировки обязательна для отметки" });
+    }
 
     let group = await Group.findById(groupId).populate("students");
     if (!group) {
@@ -30,9 +38,32 @@ const createAttendanceForGroup = async (req, res) => {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
+    const attendanceDate = new Date(date);
+    if (isNaN(attendanceDate)) {
+      return res
+        .status(400)
+        .json({ message: "Неверный формат даты тренировки" });
+    }
+
+    const { startOfDay, endOfDay } = getDayRange(attendanceDate);
+    const sessionDate = normalizeDate(attendanceDate);
+
+    const session = await TrainingSession.findOne({
+      scheduleId,
+      sessionDate,
+    });
+
+    if (!session) {
+      return res.status(400).json({
+        message:
+          'Сначала начните тренировку в разделе "Расписание", чтобы отмечать посещаемость.',
+      });
+    }
+
     const hasBeforePhoto = await PhotoReport.exists({
       type: "training_before",
       relatedId: scheduleId,
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
     });
 
     if (!hasBeforePhoto) {
@@ -52,7 +83,6 @@ const createAttendanceForGroup = async (req, res) => {
         .json({ message: "В группе нет студентов для отметки" });
     }
 
-    const attendanceDate = new Date(date);
     const records = [];
 
     for (const student of students) {
@@ -119,9 +149,19 @@ const markAttendance = async (req, res) => {
       attendance.scheduleId &&
       ["present", "absent", "sick", "excused"].includes(status)
     ) {
+      const scheduleId =
+        typeof attendance.scheduleId === "object"
+          ? attendance.scheduleId._id
+          : attendance.scheduleId;
+
+      const attendanceDate = attendance.date
+        ? new Date(attendance.date)
+        : new Date();
+      const { startOfDay, endOfDay } = getDayRange(attendanceDate);
       const hasAfterPhoto = await PhotoReport.exists({
         type: "training_after",
-        relatedId: attendance.scheduleId,
+        relatedId: scheduleId,
+        createdAt: { $gte: startOfDay, $lte: endOfDay },
       });
 
       if (!hasAfterPhoto) {
@@ -238,8 +278,16 @@ const getStudentAttendanceStats = async (req, res) => {
       student.parentId &&
       student.parentId.toString() === req.user._id.toString();
     const isAdmin = req.user.userType.includes("admin");
+    let isTrainer = false;
 
-    if (!isOwner && !isParent && !isAdmin) {
+    if (student.groupId) {
+      isTrainer = !!(await Group.findOne({
+        _id: student.groupId,
+        trainerId: req.user._id,
+      }));
+    }
+
+    if (!isOwner && !isParent && !isAdmin && !isTrainer) {
       return res.status(403).json({ message: "Access denied" });
     }
 

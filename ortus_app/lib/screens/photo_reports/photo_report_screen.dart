@@ -3,8 +3,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../models/schedule_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/group_service.dart';
 import '../../services/photo_report_service.dart';
+import '../../services/schedule_service.dart';
+import '../../services/training_session_service.dart';
 import '../../utils/constants.dart';
 
 class PhotoReportScreen extends StatefulWidget {
@@ -16,12 +20,23 @@ class PhotoReportScreen extends StatefulWidget {
 
 class _PhotoReportScreenState extends State<PhotoReportScreen> {
   final _commentController = TextEditingController();
-  final _relatedController = TextEditingController();
+  final _manualTrainingController = TextEditingController();
+  final _cleaningReportController = TextEditingController();
   final _picker = ImagePicker();
   final _service = PhotoReportService();
+  final _groupService = GroupService();
+  final _scheduleService = ScheduleService();
+  final _sessionService = TrainingSessionService();
 
   String _selectedType = 'training_before';
+  String? _selectedTrainingId;
   bool _isSubmitting = false;
+  bool _isLoadingTrainings = false;
+  bool _showManualTrainingField = false;
+  bool _trainingsInitialized = false;
+  final DateTime _today = DateTime.now();
+  List<ScheduleModel> _todayTrainings = [];
+  Map<String, TrainingSessionStatus> _sessionStatuses = {};
   List<XFile> _images = [];
 
   final _types = const {
@@ -29,6 +44,14 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     'training_after': 'Фото ПОСЛЕ тренировки',
     'cleaning': 'Уборка (для техничек)',
   };
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshTrainingOptions();
+    });
+  }
 
   Future<void> _pickImages() async {
     final messenger = ScaffoldMessenger.of(context);
@@ -70,6 +93,30 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       return;
     }
 
+    final relatedId = _resolveRelatedId();
+
+    if (_selectedType.startsWith('training') &&
+        (relatedId == null || relatedId.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Выберите тренировку или укажите ID вручную'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedType == 'cleaning' &&
+        (relatedId == null || relatedId.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Укажите ID отчёта по уборке'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -80,9 +127,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
 
       final success = await _service.createPhotoReport(
         type: _selectedType,
-        relatedId: _relatedController.text.trim().isEmpty
-            ? null
-            : _relatedController.text.trim(),
+        relatedId: relatedId,
         comment: _commentController.text.trim(),
         photos: files,
       );
@@ -93,7 +138,10 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         setState(() {
           _images = [];
           _commentController.clear();
-          _relatedController.clear();
+          _manualTrainingController.clear();
+          _cleaningReportController.clear();
+          _selectedTrainingId = null;
+          _showManualTrainingField = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -150,7 +198,11 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     }
 
     if (!allowedTypes.any((entry) => entry.key == _selectedType)) {
-      _selectedType = allowedTypes.first.key;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _handleTypeChange(allowedTypes.first.key);
+        }
+      });
     }
 
     return Scaffold(
@@ -180,8 +232,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
                   ChoiceChip(
                     label: Text(entry.value),
                     selected: _selectedType == entry.key,
-                    onSelected: (_) =>
-                        setState(() => _selectedType = entry.key),
+                    onSelected: (_) => _handleTypeChange(entry.key),
                     selectedColor: AppColors.primary.withValues(alpha: 0.2),
                     labelStyle: TextStyle(
                       color: _selectedType == entry.key
@@ -192,12 +243,13 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            if (_selectedType.startsWith('training')) _buildRelatedInput(),
+            if (_selectedType.startsWith('training'))
+              _buildTrainingSelector(user?.isTrainer == true),
             if (_selectedType == 'cleaning')
               TextFormField(
-                controller: _relatedController,
+                controller: _cleaningReportController,
                 decoration: const InputDecoration(
-                  labelText: 'ID отчёта по уборке (опционально)',
+                  labelText: 'ID отчёта по уборке',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -241,24 +293,310 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     );
   }
 
-  Widget _buildRelatedInput() {
+  Widget _buildTrainingSelector(bool isTrainer) {
+    final trainings = _filteredTrainings;
+    final dropdownValue = trainings.any((t) => t.id == _selectedTrainingId)
+        ? _selectedTrainingId
+        : trainings.isNotEmpty
+            ? trainings.first.id
+            : null;
+
+    if (dropdownValue != null && dropdownValue != _selectedTrainingId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _selectedTrainingId = dropdownValue;
+            _manualTrainingController.clear();
+            _showManualTrainingField = false;
+          });
+        }
+      });
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Тренировка',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _isLoadingTrainings ? null : _refreshTrainingOptions,
+              tooltip: 'Обновить список',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_isLoadingTrainings && !_trainingsInitialized)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          )
+        else if (trainings.isEmpty)
+          _buildEmptyTrainingsState(isTrainer)
+        else
+          InputDecorator(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: dropdownValue ?? trainings.first.id,
+                isExpanded: true,
+                items: trainings
+                    .map(
+                      (schedule) => DropdownMenuItem(
+                        value: schedule.id,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(schedule.groupName),
+                            Text(
+                              '${schedule.startTime} - ${schedule.endTime}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _selectedTrainingId = value;
+                    _manualTrainingController.clear();
+                    _showManualTrainingField = false;
+                  });
+                },
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                trainings.isEmpty
+                    ? 'Нет подходящих тренировок. Можно указать ID вручную.'
+                    : 'Если нужной тренировки нет в списке, введите ID вручную.',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _showManualTrainingField = !_showManualTrainingField;
+                });
+              },
+              child: Text(
+                _showManualTrainingField
+                    ? 'Скрыть поле'
+                    : 'Ввести ID вручную',
+              ),
+            ),
+          ],
+        ),
+        if (_showManualTrainingField || trainings.isEmpty)
+          _buildManualTrainingInput(),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildEmptyTrainingsState(bool isTrainer) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.grey.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        isTrainer
+            ? 'Сейчас нет тренировок в окне 10 минут до/после начала или тренировка ещё не создана.'
+            : 'Нет доступных расписаний. Введите ID тренировки вручную.',
+        style: const TextStyle(fontSize: 14),
+      ),
+    );
+  }
+
+  Widget _buildManualTrainingInput() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextFormField(
-          controller: _relatedController,
+          controller: _manualTrainingController,
           decoration: const InputDecoration(
             labelText: 'ID тренировки (расписание)',
             border: OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
-          'Укажите ID расписания тренировки, если нужно привязать отчёт.',
+          'Укажите ID расписания тренировки, если автоматический выбор недоступен.',
           style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
       ],
     );
+  }
+
+  String? _resolveRelatedId() {
+    if (_selectedType.startsWith('training')) {
+      final manual = _manualTrainingController.text.trim();
+      return _selectedTrainingId ?? (manual.isEmpty ? null : manual);
+    }
+    if (_selectedType == 'cleaning') {
+      final cleaning = _cleaningReportController.text.trim();
+      return cleaning.isEmpty ? null : cleaning;
+    }
+    return null;
+  }
+
+  void _handleTypeChange(String type) {
+    setState(() {
+      _selectedType = type;
+      if (!type.startsWith('training')) {
+        _selectedTrainingId = null;
+        _manualTrainingController.clear();
+        _showManualTrainingField = false;
+      } else if (!_trainingsInitialized) {
+        _refreshTrainingOptions();
+      }
+
+      if (type != 'cleaning') {
+        _cleaningReportController.clear();
+      }
+    });
+  }
+
+  Future<void> _refreshTrainingOptions() async {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+
+    setState(() {
+      _isLoadingTrainings = true;
+    });
+
+    try {
+      final groups = await _groupService.getAllGroups();
+      final myGroupIds = groups
+          .where((group) =>
+              (group.trainerId != null && group.trainerId == user.id) ||
+              (user.isTrainer && group.trainerName == user.fullName))
+          .map((group) => group.id)
+          .toSet();
+
+      final schedules = await _scheduleService.getAllSchedules();
+      final todayIndex = _today.weekday - 1;
+      final filtered = schedules.where((schedule) {
+        if (schedule.dayOfWeek != todayIndex) return false;
+        if (user.isTrainer) {
+          return myGroupIds.contains(schedule.groupId);
+        }
+        if (user.hasRole('director') || user.isAdmin == true) {
+          return myGroupIds.isEmpty
+              ? true
+              : myGroupIds.contains(schedule.groupId);
+        }
+        return false;
+      }).toList()
+        ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
+      final statuses = filtered.isEmpty
+          ? <String, TrainingSessionStatus>{}
+          : await _sessionService.getStatuses(
+              filtered.map((s) => s.id).toList(),
+              _today,
+            );
+
+      if (!mounted) return;
+      setState(() {
+        _todayTrainings = filtered;
+        _sessionStatuses = statuses;
+        _trainingsInitialized = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Не удалось обновить расписание: $e'),
+        ),
+      );
+      setState(() {
+        _todayTrainings = [];
+        _sessionStatuses = {};
+        _trainingsInitialized = true;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingTrainings = false;
+        });
+      }
+    }
+  }
+
+  List<ScheduleModel> get _filteredTrainings {
+    if (!_selectedType.startsWith('training')) return const <ScheduleModel>[];
+    final now = DateTime.now();
+    return _todayTrainings.where((schedule) {
+      final status =
+          _sessionStatuses[schedule.id] ?? TrainingSessionStatus.notStarted;
+      if (_selectedType == 'training_before') {
+        return status == TrainingSessionStatus.notStarted &&
+            _isWithinBeforeWindow(schedule, now);
+      }
+      if (_selectedType == 'training_after') {
+        return _isWithinAfterWindow(schedule, now, status);
+      }
+      return true;
+    }).toList();
+  }
+
+  DateTime _combineTime(String hhmm) {
+    final parts = hhmm.split(':');
+    final hour = int.tryParse(parts.first) ?? 0;
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return DateTime(
+      _today.year,
+      _today.month,
+      _today.day,
+      hour,
+      minute,
+    );
+  }
+
+  bool _isWithinBeforeWindow(ScheduleModel schedule, DateTime now) {
+    final start = _combineTime(schedule.startTime);
+    final windowStart = start.subtract(const Duration(minutes: 10));
+    final windowEnd = start.add(const Duration(minutes: 5));
+    return now.isAfter(windowStart) && now.isBefore(windowEnd);
+  }
+
+  bool _isWithinAfterWindow(
+    ScheduleModel schedule,
+    DateTime now,
+    TrainingSessionStatus status,
+  ) {
+    final end = _combineTime(schedule.endTime);
+    final finishDeadline = end.add(const Duration(hours: 1));
+    if (now.isAfter(finishDeadline)) return false;
+    if (status == TrainingSessionStatus.finished) return true;
+    if (status == TrainingSessionStatus.started && now.isAfter(end)) {
+      return true;
+    }
+    return false;
   }
 
   Widget _buildPhotoSection() {
@@ -343,7 +681,8 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
   @override
   void dispose() {
     _commentController.dispose();
-    _relatedController.dispose();
+    _manualTrainingController.dispose();
+    _cleaningReportController.dispose();
     super.dispose();
   }
 }
