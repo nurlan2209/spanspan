@@ -30,6 +30,18 @@ const createAttendanceForGroup = async (req, res) => {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
+    const hasBeforePhoto = await PhotoReport.exists({
+      type: "training_before",
+      relatedId: scheduleId,
+    });
+
+    if (!hasBeforePhoto) {
+      return res.status(400).json({
+        message:
+          "Сначала загрузите фото ДО тренировки (вид зала перед занятием) в разделе фотоотчётов. После этого можно создавать лист посещаемости.",
+      });
+    }
+
     let students = group.students || [];
     if (students.length === 0) {
       students = await User.find({ groupId: groupId }).select("_id");
@@ -105,7 +117,7 @@ const markAttendance = async (req, res) => {
 
     if (
       attendance.scheduleId &&
-      ["present", "absent", "sick"].includes(status)
+      ["present", "absent", "sick", "excused"].includes(status)
     ) {
       const hasAfterPhoto = await PhotoReport.exists({
         type: "training_after",
@@ -115,7 +127,7 @@ const markAttendance = async (req, res) => {
       if (!hasAfterPhoto) {
         return res.status(400).json({
           message:
-            "Загрузите фото ПОСЛЕ тренировки в разделе фотоотчётов прежде чем закрывать посещаемость.",
+            "Завершая отметки, загрузите фото ПОСЛЕ тренировки (зал/группа после занятия) в разделе фотоотчётов.",
         });
       }
     }
