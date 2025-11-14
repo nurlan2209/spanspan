@@ -343,9 +343,23 @@ const assignStudentToGroup = async (req, res) => {
       return res.status(404).json({ message: "Group not found" });
     }
 
+    const previousGroupId = student.groupId
+      ? student.groupId.toString()
+      : null;
+
     student.groupId = groupId;
     student.status = "active";
     await student.save();
+
+    if (previousGroupId && previousGroupId !== groupId) {
+      await Group.findByIdAndUpdate(previousGroupId, {
+        $pull: { students: student._id },
+      });
+    }
+
+    await Group.findByIdAndUpdate(groupId, {
+      $addToSet: { students: student._id },
+    });
 
     const updatedStudent = await User.findById(id)
       .select("-password")
@@ -404,6 +418,12 @@ const createStudentByManager = async (req, res) => {
       password,
       groupId: userType === "student" ? groupId || null : null,
     });
+
+    if (userType === "student" && groupId) {
+      await Group.findByIdAndUpdate(groupId, {
+        $addToSet: { students: user._id },
+      });
+    }
 
     const userObject = user.toObject();
     delete userObject.password;

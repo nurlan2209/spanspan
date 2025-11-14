@@ -18,14 +18,26 @@ class ScheduleModel {
   });
 
   factory ScheduleModel.fromJson(Map<String, dynamic> json) {
+    final groupField = json['groupId'];
+    String resolvedGroupId = '';
+    String resolvedGroupName = '';
+
+    if (groupField is Map<String, dynamic>) {
+      resolvedGroupId = groupField['_id']?.toString() ?? '';
+      resolvedGroupName = groupField['name']?.toString() ?? '';
+    } else if (groupField != null) {
+      resolvedGroupId = groupField.toString();
+      resolvedGroupName = json['groupName']?.toString() ?? '';
+    }
+
     return ScheduleModel(
-      id: json['_id'],
-      groupId: json['groupId']['_id'] ?? json['groupId'],
-      groupName: json['groupId']['name'] ?? '',
-      dayOfWeek: json['dayOfWeek'],
-      startTime: json['startTime'],
-      endTime: json['endTime'],
-      location: json['location'],
+      id: json['_id']?.toString() ?? '',
+      groupId: resolvedGroupId,
+      groupName: resolvedGroupName,
+      dayOfWeek: json['dayOfWeek'] ?? 0,
+      startTime: json['startTime']?.toString() ?? '',
+      endTime: json['endTime']?.toString() ?? '',
+      location: json['location']?.toString() ?? '',
     );
   }
 

@@ -176,18 +176,47 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
         FutureBuilder<List<ScheduleModel>>(
           future: ScheduleService().getScheduleByGroup(_selectedGroupId!),
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const CircularProgressIndicator();
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                ),
+              );
+            }
+            if (snapshot.hasError) {
+              return Text(
+                'Не удалось загрузить расписание',
+                style: TextStyle(color: Colors.red.shade400),
+              );
+            }
+            final schedules = snapshot.data ?? [];
+            if (schedules.isEmpty) {
+              return const Text(
+                'Для этой группы ещё нет расписания',
+                style: TextStyle(color: AppColors.grey),
+              );
+            }
+
+            final currentValue =
+                _selectedScheduleId ?? schedules.first.id;
+            if (_selectedScheduleId == null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() => _selectedScheduleId = schedules.first.id);
+                  _checkAttendanceAccess();
+                }
+              });
             }
 
             return DropdownButtonFormField<String>(
-              value: _selectedScheduleId,
+              value: currentValue,
               decoration: InputDecoration(
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              items: snapshot.data!.map((schedule) {
+              items: schedules.map((schedule) {
                 return DropdownMenuItem(
                   value: schedule.id,
                   child: Text(
