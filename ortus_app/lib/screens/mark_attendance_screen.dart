@@ -49,6 +49,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.black,
         title: const Text(
           'Отметить посещаемость',

@@ -181,6 +181,7 @@ class _AppNavigatorState extends State<AppNavigator> {
   Widget _profileScreen() {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.black,
         title: const Text('Профиль', style: TextStyle(color: AppColors.white)),
         iconTheme: const IconThemeData(color: AppColors.white),

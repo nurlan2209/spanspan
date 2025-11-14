@@ -118,6 +118,7 @@ class _ScheduleListScreenState extends State<ScheduleListScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.black,
         title: const Text(
           'Расписание',

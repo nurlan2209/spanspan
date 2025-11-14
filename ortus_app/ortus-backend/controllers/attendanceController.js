@@ -15,7 +15,7 @@ const createAttendanceForGroup = async (req, res) => {
 
     const { groupId, scheduleId, date } = req.body;
 
-    const group = await Group.findById(groupId).populate("students");
+    let group = await Group.findById(groupId).populate("students");
     if (!group) {
       return res.status(404).json({ message: "Group not found" });
     }
@@ -30,10 +30,20 @@ const createAttendanceForGroup = async (req, res) => {
       return res.status(404).json({ message: "Schedule not found" });
     }
 
+    let students = group.students || [];
+    if (students.length === 0) {
+      students = await User.find({ groupId: groupId }).select("_id");
+    }
+    if (students.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "В группе нет студентов для отметки" });
+    }
+
     const attendanceDate = new Date(date);
     const records = [];
 
-    for (const student of group.students) {
+    for (const student of students) {
       try {
         const attendance = await Attendance.create({
           scheduleId,

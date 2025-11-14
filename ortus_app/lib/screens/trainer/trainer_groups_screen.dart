@@ -60,6 +60,7 @@ class _TrainerGroupsScreenState extends State<TrainerGroupsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.black,
         title: const Text(
           'Мои группы',

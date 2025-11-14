@@ -90,6 +90,7 @@ class _PhotoReportsGalleryScreenState extends State<PhotoReportsGalleryScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.black,
         title: const Text(
           'Фотоотчёты',
