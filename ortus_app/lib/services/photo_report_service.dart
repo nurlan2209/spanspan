@@ -71,4 +71,41 @@ class PhotoReportService {
     }
     return [];
   }
+
+  Future<PhotoReportModel?> getLatestReport({
+    required String type,
+    required String relatedId,
+    DateTime? date,
+  }) async {
+    final token = await AuthService().getToken();
+    if (token == null) return null;
+
+    final params = <String, String>{
+      'type': type,
+      'relatedId': relatedId,
+      'limit': '1',
+    };
+
+    if (date != null) {
+      final dayStart = DateTime(date.year, date.month, date.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+      params['dateFrom'] = dayStart.toIso8601String();
+      params['dateTo'] = dayEnd.toIso8601String();
+    }
+
+    final uri = Uri.parse('${ApiConfig.baseUrl}/photo-reports')
+        .replace(queryParameters: params);
+
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final List list = json.decode(response.body);
+      if (list.isEmpty) return null;
+      return PhotoReportModel.fromJson(list.first);
+    }
+    return null;
+  }
 }

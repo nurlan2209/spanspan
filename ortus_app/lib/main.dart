@@ -90,7 +90,19 @@ class MyApp extends StatelessWidget {
         '/create-user': (context) => const CreateUserScreen(),
         '/pending-students': (context) => const PendingStudentsScreen(),
         '/create-student': (context) => const CreateStudentScreen(),
-        '/photo-report': (context) => const PhotoReportScreen(),
+        '/photo-report': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? initialType;
+          String? initialScheduleId;
+          if (args is Map) {
+            initialType = args['type']?.toString();
+            initialScheduleId = args['scheduleId']?.toString();
+          }
+          return PhotoReportScreen(
+            initialType: initialType,
+            initialScheduleId: initialScheduleId,
+          );
+        },
         '/photo-reports-gallery': (context) =>
             const PhotoReportsGalleryScreen(),
         '/cleaning-report': (context) => const CleaningReportScreen(),

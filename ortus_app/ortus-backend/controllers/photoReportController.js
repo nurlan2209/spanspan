@@ -180,11 +180,12 @@ const getPhotoReports = async (req, res) => {
         .json({ message: "Access denied for photo reports" });
     }
 
-    const { type, userId, dateFrom, dateTo } = req.query;
+    const { type, userId, dateFrom, dateTo, relatedId, limit } = req.query;
     const filter = {};
 
     if (type) filter.type = type;
     if (userId) filter.authorId = userId;
+    if (relatedId) filter.relatedId = relatedId;
     if (dateFrom || dateTo) {
       filter.createdAt = {};
       if (dateFrom) filter.createdAt.$gte = new Date(dateFrom);
@@ -198,9 +199,18 @@ const getPhotoReports = async (req, res) => {
       filter.authorId = req.user._id;
     }
 
-    const reports = await PhotoReport.find(filter)
+    let query = PhotoReport.find(filter)
       .populate("authorId", "fullName userType")
       .sort({ createdAt: -1 });
+
+    if (limit) {
+      const parsedLimit = parseInt(limit, 10);
+      if (!Number.isNaN(parsedLimit) && parsedLimit > 0) {
+        query = query.limit(parsedLimit);
+      }
+    }
+
+    const reports = await query;
 
     res.json(reports);
   } catch (error) {

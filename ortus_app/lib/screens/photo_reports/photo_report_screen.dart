@@ -2,7 +2,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../config/api_config.dart';
+import '../../models/photo_report_model.dart';
 import '../../models/schedule_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/group_service.dart';
@@ -12,7 +15,14 @@ import '../../services/training_session_service.dart';
 import '../../utils/constants.dart';
 
 class PhotoReportScreen extends StatefulWidget {
-  const PhotoReportScreen({super.key});
+  final String? initialType;
+  final String? initialScheduleId;
+
+  const PhotoReportScreen({
+    super.key,
+    this.initialType,
+    this.initialScheduleId,
+  });
 
   @override
   State<PhotoReportScreen> createState() => _PhotoReportScreenState();
@@ -30,14 +40,20 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
 
   String _selectedType = 'training_before';
   String? _selectedTrainingId;
+  String? _pendingInitialScheduleId;
   bool _isSubmitting = false;
   bool _isLoadingTrainings = false;
+  bool _isLoadingLatestReports = false;
+  String? _latestReportsScheduleId;
   bool _showManualTrainingField = false;
   bool _trainingsInitialized = false;
   final DateTime _today = DateTime.now();
   List<ScheduleModel> _todayTrainings = [];
   Map<String, TrainingSessionStatus> _sessionStatuses = {};
+  PhotoReportModel? _latestBeforeReport;
+  PhotoReportModel? _latestAfterReport;
   List<XFile> _images = [];
+  bool _argsApplied = false;
 
   final _types = const {
     'training_before': 'Фото ДО тренировки',
@@ -48,9 +64,29 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedType = widget.initialType ?? _selectedType;
+    _pendingInitialScheduleId = widget.initialScheduleId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _refreshTrainingOptions();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_argsApplied) return;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      final type = args['type']?.toString();
+      final scheduleId = args['scheduleId']?.toString();
+      if (type != null && type.isNotEmpty) {
+        _selectedType = type;
+      }
+      if (scheduleId != null && scheduleId.isNotEmpty) {
+        _pendingInitialScheduleId = scheduleId;
+      }
+    }
+    _argsApplied = true;
   }
 
   Future<void> _pickImages() async {
@@ -140,9 +176,11 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           _commentController.clear();
           _manualTrainingController.clear();
           _cleaningReportController.clear();
-          _selectedTrainingId = null;
           _showManualTrainingField = false;
         });
+        if (_selectedType.startsWith('training') && _selectedTrainingId != null) {
+          _loadLatestReportsFor(_selectedTrainingId!);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Фотоотчёт отправлен'),
@@ -378,6 +416,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
                     _manualTrainingController.clear();
                     _showManualTrainingField = false;
                   });
+                  _loadLatestReportsFor(value);
                 },
               ),
             ),
@@ -410,6 +449,8 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         if (_showManualTrainingField || trainings.isEmpty)
           _buildManualTrainingInput(),
         const SizedBox(height: 12),
+        if (_selectedTrainingId != null)
+          _buildLatestPhotoPreview(),
       ],
     );
   }
@@ -451,6 +492,62 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     );
   }
 
+  Widget _buildLatestPhotoPreview() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.timeline, size: 18, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Последние фото за сегодня для выбранной тренировки',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_isLoadingLatestReports)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(minHeight: 2),
+          )
+        else if (_latestBeforeReport == null && _latestAfterReport == null)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.grey.withValues(alpha: 0.4)),
+            ),
+            child: Text(
+              'Фото за сегодня ещё не загружались.',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          )
+        else ...[
+          if (_latestBeforeReport != null)
+            _LatestPhotoCard(
+              title: 'Фото ДО тренировки',
+              report: _latestBeforeReport!,
+              urlBuilder: _photoUrl,
+            ),
+          if (_latestAfterReport != null)
+            _LatestPhotoCard(
+              title: 'Фото ПОСЛЕ тренировки',
+              report: _latestAfterReport!,
+              urlBuilder: _photoUrl,
+            ),
+        ],
+      ],
+    );
+  }
+
   String? _resolveRelatedId() {
     if (_selectedType.startsWith('training')) {
       final manual = _manualTrainingController.text.trim();
@@ -470,6 +567,8 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         _selectedTrainingId = null;
         _manualTrainingController.clear();
         _showManualTrainingField = false;
+        _latestBeforeReport = null;
+        _latestAfterReport = null;
       } else if (!_trainingsInitialized) {
         _refreshTrainingOptions();
       }
@@ -526,6 +625,25 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         _sessionStatuses = statuses;
         _trainingsInitialized = true;
       });
+
+      final preselected = _pendingInitialScheduleId;
+      if (preselected != null &&
+          filtered.any((schedule) => schedule.id == preselected)) {
+        setState(() {
+          _selectedTrainingId = preselected;
+          _pendingInitialScheduleId = null;
+        });
+        _loadLatestReportsFor(preselected);
+      } else if (_selectedTrainingId != null &&
+          filtered.any((schedule) => schedule.id == _selectedTrainingId)) {
+        _loadLatestReportsFor(_selectedTrainingId!);
+      } else if (filtered.isNotEmpty) {
+        final firstId = filtered.first.id;
+        setState(() {
+          _selectedTrainingId = firstId;
+        });
+        _loadLatestReportsFor(firstId);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -542,6 +660,50 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       if (mounted) {
         setState(() {
           _isLoadingTrainings = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadLatestReportsFor(String scheduleId) async {
+    if (!_selectedType.startsWith('training')) {
+      return;
+    }
+    setState(() {
+      _isLoadingLatestReports = true;
+      _latestReportsScheduleId = scheduleId;
+    });
+    try {
+      final date = DateTime.now();
+      final before = await _service.getLatestReport(
+        type: 'training_before',
+        relatedId: scheduleId,
+        date: date,
+      );
+      final after = await _service.getLatestReport(
+        type: 'training_after',
+        relatedId: scheduleId,
+        date: date,
+      );
+      if (!mounted) return;
+      if (_latestReportsScheduleId == scheduleId) {
+        setState(() {
+          _latestBeforeReport = before;
+          _latestAfterReport = after;
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      if (_latestReportsScheduleId == scheduleId) {
+        setState(() {
+          _latestBeforeReport = null;
+          _latestAfterReport = null;
+        });
+      }
+    } finally {
+      if (mounted && _latestReportsScheduleId == scheduleId) {
+        setState(() {
+          _isLoadingLatestReports = false;
         });
       }
     }
@@ -589,14 +751,12 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     DateTime now,
     TrainingSessionStatus status,
   ) {
+    if (status != TrainingSessionStatus.finished) {
+      return false;
+    }
     final end = _combineTime(schedule.endTime);
     final finishDeadline = end.add(const Duration(hours: 1));
-    if (now.isAfter(finishDeadline)) return false;
-    if (status == TrainingSessionStatus.finished) return true;
-    if (status == TrainingSessionStatus.started && now.isAfter(end)) {
-      return true;
-    }
-    return false;
+    return now.isBefore(finishDeadline);
   }
 
   Widget _buildPhotoSection() {
@@ -684,5 +844,76 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     _manualTrainingController.dispose();
     _cleaningReportController.dispose();
     super.dispose();
+  }
+
+  String _photoUrl(String path) {
+    if (path.startsWith('http')) return path;
+    final base = ApiConfig.baseUrl.replaceFirst('/api', '');
+    final normalized = path.startsWith('/') ? path.substring(1) : path;
+    return '$base/$normalized';
+  }
+}
+
+class _LatestPhotoCard extends StatelessWidget {
+  final String title;
+  final PhotoReportModel report;
+  final String Function(String) urlBuilder;
+
+  const _LatestPhotoCard({
+    required this.title,
+    required this.report,
+    required this.urlBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final photoPath = report.photos.isNotEmpty ? report.photos.first : null;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (photoPath != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  urlBuilder(photoPath),
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 140,
+                    alignment: Alignment.center,
+                    color: AppColors.grey.withValues(alpha: 0.1),
+                    child: const Text('Не удалось загрузить фото'),
+                  ),
+                ),
+              )
+            else
+              const Text('Фото отсутствует'),
+            const SizedBox(height: 6),
+            Text(
+              'Автор: ${report.authorName}',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+            Text(
+              'Время: ${DateFormat('dd.MM HH:mm').format(report.createdAt.toLocal())}',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
