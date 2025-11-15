@@ -127,17 +127,6 @@ class _ScheduleListScreenState extends State<ScheduleListScreen> {
     );
   }
 
-  void _openAfterPhoto(ScheduleModel schedule) {
-    Navigator.pushNamed(
-      context,
-      '/photo-report',
-      arguments: {
-        'type': 'training_after',
-        'scheduleId': schedule.id,
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
@@ -226,9 +215,6 @@ class _ScheduleListScreenState extends State<ScheduleListScreen> {
                   showControls && status == TrainingSessionStatus.notStarted;
               final canFinish =
                   showControls && status == TrainingSessionStatus.started;
-              final canUploadAfter =
-                  showControls && status == TrainingSessionStatus.finished;
-
               return _ScheduleCard(
                 schedule: schedule,
                 status: status,
@@ -237,9 +223,6 @@ class _ScheduleListScreenState extends State<ScheduleListScreen> {
                 canFinish: canFinish && _isFinishWindowOpen(schedule),
                 onStart: showControls ? () => _handleStart(schedule) : null,
                 onFinish: showControls ? () => _handleFinish(schedule) : null,
-                onUploadAfterPhoto: canUploadAfter
-                    ? () => _openAfterPhoto(schedule)
-                    : null,
               );
             }),
             const SizedBox(height: 16),
@@ -258,7 +241,6 @@ class _ScheduleCard extends StatelessWidget {
   final bool canFinish;
   final VoidCallback? onStart;
   final VoidCallback? onFinish;
-  final VoidCallback? onUploadAfterPhoto;
 
   const _ScheduleCard({
     required this.schedule,
@@ -268,7 +250,6 @@ class _ScheduleCard extends StatelessWidget {
     required this.canFinish,
     this.onStart,
     this.onFinish,
-    this.onUploadAfterPhoto,
   });
 
   @override
@@ -362,17 +343,6 @@ class _ScheduleCard extends StatelessWidget {
                   color: Colors.grey.shade600,
                 ),
               ),
-              if (onUploadAfterPhoto != null) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: onUploadAfterPhoto,
-                    icon: const Icon(Icons.photo_camera_back_outlined),
-                    label: const Text('Фото ПОСЛЕ тренировки'),
-                  ),
-                ),
-              ],
             ],
           ],
         ),

@@ -30,7 +30,6 @@ class PhotoReportScreen extends StatefulWidget {
 
 class _PhotoReportScreenState extends State<PhotoReportScreen> {
   final _commentController = TextEditingController();
-  final _manualTrainingController = TextEditingController();
   final _cleaningReportController = TextEditingController();
   final _picker = ImagePicker();
   final _service = PhotoReportService();
@@ -45,7 +44,6 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
   bool _isLoadingTrainings = false;
   bool _isLoadingLatestReports = false;
   String? _latestReportsScheduleId;
-  bool _showManualTrainingField = false;
   bool _trainingsInitialized = false;
   final DateTime _today = DateTime.now();
   List<ScheduleModel> _todayTrainings = [];
@@ -135,7 +133,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         (relatedId == null || relatedId.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Выберите тренировку или укажите ID вручную'),
+          content: Text('Выберите тренировку из списка, чтобы продолжить'),
           backgroundColor: Colors.red,
         ),
       );
@@ -176,18 +174,26 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         setState(() {
           _images = [];
           _commentController.clear();
-          _manualTrainingController.clear();
           _cleaningReportController.clear();
-          _showManualTrainingField = false;
+          _selectedTrainingId = null;
+          _latestBeforeReport = null;
+          _latestAfterReport = null;
         });
-        if (_selectedType.startsWith('training') && _selectedTrainingId != null) {
-          _loadLatestReportsFor(_selectedTrainingId!);
+        if (_selectedType.startsWith('training')) {
+          if (_selectedTrainingId != null) {
+            _loadLatestReportsFor(_selectedTrainingId!);
+          }
+          await _refreshTrainingOptions();
         }
+        if (!mounted) return;
+        final thankYouMessage = effectiveType == 'training_after'
+            ? 'Спасибо, тренировка завершена! Фото ПОСЛЕ принято.'
+            : effectiveType == 'training_before'
+                ? 'Спасибо! Фото ДО тренировки загружено.'
+                : 'Отчёт отправлен.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(effectiveType == 'training_after'
-                ? 'Фото ПОСЛЕ тренировки отправлено'
-                : 'Фотоотчёт отправлен'),
+            content: Text(thankYouMessage),
             backgroundColor: Colors.green,
           ),
         );
@@ -331,18 +337,42 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
             if (_selectedType == 'cleaning')
               TextFormField(
                 controller: _cleaningReportController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'ID отчёта по уборке',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.grey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.grey),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 2),
+                  ),
                 ),
               ),
             const SizedBox(height: 20),
             TextFormField(
               controller: _commentController,
               maxLines: 3,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Комментарий',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.grey),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.grey),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 2),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -386,17 +416,15 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
             ? trainings.first.id
             : null;
 
-    if (dropdownValue != null && dropdownValue != _selectedTrainingId) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _selectedTrainingId = dropdownValue;
-            _manualTrainingController.clear();
-            _showManualTrainingField = false;
-          });
-        }
-      });
-    }
+      if (dropdownValue != null && dropdownValue != _selectedTrainingId) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _selectedTrainingId = dropdownValue;
+            });
+          }
+        });
+      }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -456,8 +484,6 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
                   if (value == null) return;
                   setState(() {
                     _selectedTrainingId = value;
-                    _manualTrainingController.clear();
-                    _showManualTrainingField = false;
                   });
                   _loadLatestReportsFor(value);
                 },
@@ -465,32 +491,6 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
             ),
           ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                trainings.isEmpty
-                    ? 'Нет подходящих тренировок. Можно указать ID вручную.'
-                    : 'Если нужной тренировки нет в списке, введите ID вручную.',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _showManualTrainingField = !_showManualTrainingField;
-                });
-              },
-              child: Text(
-                _showManualTrainingField
-                    ? 'Скрыть поле'
-                    : 'Ввести ID вручную',
-              ),
-            ),
-          ],
-        ),
-        if (_showManualTrainingField || trainings.isEmpty)
-          _buildManualTrainingInput(),
         const SizedBox(height: 12),
         if (_selectedTrainingId != null)
           _buildLatestPhotoPreview(),
@@ -508,30 +508,10 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       ),
       child: Text(
         isTrainer
-            ? 'Сейчас нет тренировок в окне 10 минут до/после начала или тренировка ещё не создана.'
-            : 'Нет доступных расписаний. Введите ID тренировки вручную.',
+            ? 'Сейчас нет активных тренировок вокруг времени начала/окончания. Начните или завершите тренировку в разделе "Расписание", чтобы отправить фото.'
+            : 'Нет доступных расписаний для вашего аккаунта.',
         style: const TextStyle(fontSize: 14),
       ),
-    );
-  }
-
-  Widget _buildManualTrainingInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          controller: _manualTrainingController,
-          decoration: const InputDecoration(
-            labelText: 'ID тренировки (расписание)',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Укажите ID расписания тренировки, если автоматический выбор недоступен.',
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-        ),
-      ],
     );
   }
 
@@ -669,8 +649,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
 
   String? _resolveRelatedId() {
     if (_selectedType.startsWith('training')) {
-      final manual = _manualTrainingController.text.trim();
-      return _selectedTrainingId ?? (manual.isEmpty ? null : manual);
+      return _selectedTrainingId;
     }
     if (_selectedType == 'cleaning') {
       final cleaning = _cleaningReportController.text.trim();
@@ -705,8 +684,6 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       _selectedType = type;
       if (!type.startsWith('training')) {
         _selectedTrainingId = null;
-        _manualTrainingController.clear();
-        _showManualTrainingField = false;
         _latestBeforeReport = null;
         _latestAfterReport = null;
       } else if (!_trainingsInitialized) {
@@ -981,7 +958,6 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
   @override
   void dispose() {
     _commentController.dispose();
-    _manualTrainingController.dispose();
     _cleaningReportController.dispose();
     super.dispose();
   }
