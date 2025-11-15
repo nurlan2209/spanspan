@@ -28,7 +28,9 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   bool _attendanceAllowed = true;
   bool _checkingGate = false;
   bool _attendanceFinalized = false;
+  bool _sessionFinished = false;
   final _sessionService = TrainingSessionService();
+  final Map<String, bool> _finalizedSessions = {};
 
   final statuses = {
     'present': 'Присутствовал',
@@ -87,7 +89,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 child: CustomButton(
                   text: _attendanceRecords.isEmpty
                       ? 'Создать отметки'
-                      : 'Загрузить отметки',
+                      : 'Обновить отметки',
                   onPressed: _loadOrCreateAttendance,
                 ),
               ),
@@ -152,14 +154,14 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                         ),
                       )
                       .toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedGroupId = val;
-                      _selectedScheduleId = null;
-                      _attendanceRecords = [];
-                      _attendanceFinalized = false;
-                    });
-                  },
+          onChanged: (val) {
+            setState(() {
+              _selectedGroupId = val;
+              _selectedScheduleId = null;
+              _attendanceRecords = [];
+              _attendanceFinalized = false;
+            });
+          },
                 ),
               ),
             );
@@ -208,8 +210,14 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
             if (_selectedScheduleId == null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
-                  setState(() => _selectedScheduleId = schedules.first.id);
+                  setState(() {
+                    _selectedScheduleId = schedules.first.id;
+                    final key = _currentSessionKey;
+                    _attendanceFinalized =
+                        key != null ? (_finalizedSessions[key] ?? false) : false;
+                  });
                   _checkAttendanceAccess();
+                  _loadAttendance(createIfEmpty: false);
                 }
               });
             }
@@ -234,9 +242,18 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                     setState(() {
                       _selectedScheduleId = val;
                       _attendanceRecords = [];
-                      _attendanceFinalized = false;
+                      if (val != null) {
+                        _attendanceFinalized = _finalizedSessions[
+                                _sessionKeyFor(val, _selectedDate)] ??
+                            false;
+                      } else {
+                        _attendanceFinalized = false;
+                      }
                     });
                     _checkAttendanceAccess();
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _loadAttendance(createIfEmpty: false);
+                    });
                   },
                 ),
               ),
@@ -268,8 +285,18 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
               setState(() {
                 _selectedDate = date;
                 _attendanceRecords = [];
+                if (_selectedScheduleId != null) {
+                  _attendanceFinalized = _finalizedSessions[_sessionKeyFor(
+                        _selectedScheduleId!,
+                        _selectedDate,
+                      )] ??
+                      false;
+                } else {
+                  _attendanceFinalized = false;
+                }
               });
               _checkAttendanceAccess();
+              _loadAttendance(createIfEmpty: false);
             }
           },
           child: Container(
@@ -333,7 +360,9 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Начните тренировку в расписании, чтобы открыть отметку посещаемости за сегодня.',
+              _sessionFinished
+                  ? 'Тренировка завершена — отметка закрыта.'
+                  : 'Начните тренировку в расписании, чтобы открыть отметку посещаемости за сегодня.',
               style: TextStyle(color: Colors.red.shade400),
             ),
           ),
@@ -370,18 +399,20 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       setState(() {
         _attendanceAllowed = true;
         _checkingGate = false;
+        _sessionFinished = false;
       });
       return;
     }
     setState(() => _checkingGate = true);
     try {
-      final allowed = await _sessionService.hasSessionStarted(
+      final status = await _sessionService.getStatus(
         _selectedScheduleId!,
         _selectedDate,
       );
       if (!mounted) return;
       setState(() {
-        _attendanceAllowed = allowed;
+        _attendanceAllowed = status == TrainingSessionStatus.started;
+        _sessionFinished = status == TrainingSessionStatus.finished;
         _checkingGate = false;
       });
     } catch (_) {
@@ -389,6 +420,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       setState(() {
         _attendanceAllowed = true;
         _checkingGate = false;
+        _sessionFinished = false;
       });
     }
   }
@@ -529,35 +561,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       );
       return;
     }
-
-    setState(() => _isLoading = true);
-
-    // Попытка загрузить существующие записи
-    var records = await AttendanceService().getGroupAttendanceByDate(
-      _selectedGroupId!,
-      _selectedDate,
-    );
-
-    // Если записей нет - создаём новые
-    if (records.isEmpty) {
-      records = await AttendanceService().createAttendanceForGroup(
-        groupId: _selectedGroupId!,
-        scheduleId: _selectedScheduleId!,
-        date: _selectedDate,
-      );
-    }
-
-    setState(() {
-      _attendanceRecords = records;
-      _isLoading = false;
-      _attendanceFinalized = false;
-    });
-
-    if (records.isEmpty && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Нет студентов в группе')));
-    }
+    await _loadAttendance(createIfEmpty: true);
   }
 
   void _updateAttendance(AttendanceModel record, String newStatus) async {
@@ -663,6 +667,10 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   void _finalizeAttendance() {
     if (_attendanceRecords.isEmpty) return;
     setState(() => _attendanceFinalized = true);
+    final key = _currentSessionKey;
+    if (key != null) {
+      _finalizedSessions[key] = true;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
@@ -671,4 +679,49 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       ),
     );
   }
+
+  Future<void> _loadAttendance({required bool createIfEmpty}) async {
+    if (_selectedGroupId == null || _selectedScheduleId == null) return;
+    setState(() => _isLoading = true);
+
+    var records = await AttendanceService().getGroupAttendanceByDate(
+      _selectedGroupId!,
+      _selectedDate,
+    );
+
+    if (records.isEmpty && createIfEmpty) {
+      records = await AttendanceService().createAttendanceForGroup(
+        groupId: _selectedGroupId!,
+        scheduleId: _selectedScheduleId!,
+        date: _selectedDate,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _attendanceRecords = records;
+      _isLoading = false;
+      final key = _currentSessionKey;
+      _attendanceFinalized =
+          key != null ? (_finalizedSessions[key] ?? false) : false;
+    });
+
+    if (records.isEmpty && createIfEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Нет студентов в группе')),
+      );
+    }
+  }
+
+  String? get _currentSessionKey {
+    final scheduleId = _selectedScheduleId;
+    if (scheduleId == null) return null;
+    return _sessionKeyFor(scheduleId, _selectedDate);
+  }
+
+  String _sessionKeyFor(String scheduleId, DateTime date) =>
+      '${scheduleId}_${_dateKey(date)}';
+
+  String _dateKey(DateTime date) =>
+      '${date.year}-${date.month}-${date.day}';
 }

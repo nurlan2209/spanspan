@@ -160,6 +160,8 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           .toList();
 
       final effectiveType = _effectiveType;
+      final lastTrainingId =
+          _selectedType.startsWith('training') ? _selectedTrainingId : null;
 
       final success = await _service.createPhotoReport(
         type: effectiveType,
@@ -175,14 +177,12 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           _images = [];
           _commentController.clear();
           _cleaningReportController.clear();
-          _selectedTrainingId = null;
-          _latestBeforeReport = null;
-          _latestAfterReport = null;
-        });
-        if (_selectedType.startsWith('training')) {
-          if (_selectedTrainingId != null) {
-            _loadLatestReportsFor(_selectedTrainingId!);
+          if (lastTrainingId != null) {
+            _selectedTrainingId = lastTrainingId;
           }
+        });
+        if (_selectedType.startsWith('training') && lastTrainingId != null) {
+          await _loadLatestReportsFor(lastTrainingId);
           await _refreshTrainingOptions();
         }
         if (!mounted) return;
@@ -399,7 +399,9 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: AppColors.white,
                 ),
-                onPressed: _isSubmitting ? null : _submit,
+                onPressed: (_isSubmitting || _isTrainingLocked)
+                    ? null
+                    : _submit,
               ),
             ),
           ],
@@ -518,6 +520,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
   Widget _buildTrainingTypeBanner() {
     final effectiveType = _effectiveType;
     final status = _selectedTrainingStatus;
+    final hasAfter = _latestAfterReport != null;
     String title;
     String description;
     IconData icon;
@@ -530,10 +533,15 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           'Выберите расписание тренировки, чтобы отправить фотоотчёт.';
       icon = Icons.info_outline;
       color = Colors.grey.shade600;
+    } else if (hasAfter) {
+      title = 'Фото ПОСЛЕ загружено';
+      description = 'Спасибо! Отчёт сохранён. Выберите следующую тренировку.';
+      icon = Icons.verified;
+      color = Colors.teal.shade700;
     } else if (effectiveType == 'training_after') {
       title = 'Фото ПОСЛЕ тренировки';
       description =
-          'Тренировка завершена — загрузите итоговое фото в течение часа после окончания.';
+          'Тренировка завершена — загрузите итоговое фото в течение 7 минут после окончания.';
       icon = Icons.flag;
       color = Colors.green.shade700;
     } else {
@@ -548,6 +556,11 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         effectiveType == 'training_before') {
       description =
           'Тренировка уже начата. Перед следующей тренировкой добавьте фото ДО заранее.';
+    }
+
+    if (hasAfter) {
+      description =
+          'Фото ПОСЛЕ уже отправлено. Можете перейти к следующей тренировке.';
     }
 
     return Container(
@@ -665,6 +678,9 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     return _selectedType;
   }
 
+  bool get _isTrainingLocked =>
+      _selectedType.startsWith('training') && _latestAfterReport != null;
+
   String _resolveTrainingTypeForStatus() {
     if (_selectedTrainingId == null) return 'training_before';
     final status = _selectedTrainingStatus;
@@ -728,6 +744,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         return false;
       }).toList()
         ..sort((a, b) => a.startTime.compareTo(b.startTime));
+
 
       final statuses = filtered.isEmpty
           ? <String, TrainingSessionStatus>{}
@@ -888,7 +905,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             TextButton.icon(
-              onPressed: _pickImages,
+              onPressed: _isTrainingLocked ? null : _pickImages,
               icon: const Icon(Icons.add_photo_alternate),
               label: const Text('Добавить'),
             ),
@@ -987,6 +1004,9 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       );
 
   String get _submitButtonText {
+    if (_isTrainingLocked) {
+      return 'Фото загружено';
+    }
     final type = _effectiveType;
     switch (type) {
       case 'training_before':

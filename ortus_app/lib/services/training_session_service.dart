@@ -96,8 +96,7 @@ class TrainingSessionService {
 
   Future<bool> hasSessionStarted(String scheduleId, DateTime date) async {
     final status = await getStatus(scheduleId, date);
-    return status == TrainingSessionStatus.started ||
-        status == TrainingSessionStatus.finished;
+    return status == TrainingSessionStatus.started;
   }
 
   Future<void> _postAction(
