@@ -161,8 +161,10 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           .where((file) => file.path.isNotEmpty)
           .toList();
 
+      final effectiveType = _effectiveType;
+
       final success = await _service.createPhotoReport(
-        type: _selectedType,
+        type: effectiveType,
         relatedId: relatedId,
         comment: _commentController.text.trim(),
         photos: files,
@@ -182,8 +184,10 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           _loadLatestReportsFor(_selectedTrainingId!);
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Фотоотчёт отправлен'),
+          SnackBar(
+            content: Text(effectiveType == 'training_after'
+                ? 'Фото ПОСЛЕ тренировки отправлено'
+                : 'Фотоотчёт отправлен'),
             backgroundColor: Colors.green,
           ),
         );
@@ -243,6 +247,34 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       });
     }
 
+    final hasTrainingOption =
+        allowedTypes.any((entry) => entry.key.startsWith('training'));
+
+    final chipEntries = <MapEntry<String, String>>[];
+    if (hasTrainingOption) {
+      chipEntries.add(const MapEntry('training_before', 'Тренировка'));
+    }
+    if (allowedTypes.any((entry) => entry.key == 'cleaning')) {
+      chipEntries.add(
+        MapEntry('cleaning', _types['cleaning']!),
+      );
+    }
+
+    final validKeys = chipEntries.map((e) => e.key).toSet()
+      ..addAll(
+        allowedTypes
+            .where((entry) => entry.key == 'training_after')
+            .map((e) => e.key),
+      );
+
+    if (!validKeys.contains(_selectedType)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && chipEntries.isNotEmpty) {
+          _handleTypeChange(chipEntries.first.key);
+        }
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.black,
@@ -266,23 +298,36 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final entry in allowedTypes)
-                  ChoiceChip(
-                    label: Text(entry.value),
-                    selected: _selectedType == entry.key,
-                    onSelected: (_) => _handleTypeChange(entry.key),
-                    selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                    labelStyle: TextStyle(
-                      color: _selectedType == entry.key
-                          ? AppColors.primary
-                          : AppColors.black,
-                    ),
+                for (final entry in chipEntries)
+                  Builder(
+                    builder: (context) {
+                      final isTrainingChip = entry.key == 'training_before';
+                      final isSelected = isTrainingChip
+                          ? _selectedType.startsWith('training')
+                          : _selectedType == entry.key;
+                      return ChoiceChip(
+                        label: Text(isTrainingChip
+                            ? 'Тренировка'
+                            : entry.value),
+                        selected: isSelected,
+                        onSelected: (_) => _handleTypeChange(entry.key),
+                        selectedColor:
+                            AppColors.primary.withValues(alpha: 0.2),
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.black,
+                        ),
+                      );
+                    },
                   ),
               ],
             ),
             const SizedBox(height: 20),
-            if (_selectedType.startsWith('training'))
+            if (_selectedType.startsWith('training')) ...[
               _buildTrainingSelector(user?.isTrainer == true),
+              _buildTrainingTypeBanner(),
+            ],
             if (_selectedType == 'cleaning')
               TextFormField(
                 controller: _cleaningReportController,
@@ -316,7 +361,9 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
                         ),
                       )
                     : const Icon(Icons.cloud_upload),
-                label: Text(_isSubmitting ? 'Отправка...' : 'Отправить отчёт'),
+                label: Text(
+                  _isSubmitting ? 'Отправка...' : _submitButtonText,
+                ),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: AppColors.primary,
@@ -380,11 +427,7 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           _buildEmptyTrainingsState(isTrainer)
         else
           InputDecorator(
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+            decoration: _trainingDropdownDecoration,
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: dropdownValue ?? trainings.first.id,
@@ -492,6 +535,82 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     );
   }
 
+  Widget _buildTrainingTypeBanner() {
+    final effectiveType = _effectiveType;
+    final status = _selectedTrainingStatus;
+    String title;
+    String description;
+    IconData icon;
+    Color color;
+
+    if (_selectedTrainingId == null ||
+        !_todayTrainings.any((t) => t.id == _selectedTrainingId)) {
+      title = 'Выберите тренировку';
+      description =
+          'Выберите расписание тренировки, чтобы отправить фотоотчёт.';
+      icon = Icons.info_outline;
+      color = Colors.grey.shade600;
+    } else if (effectiveType == 'training_after') {
+      title = 'Фото ПОСЛЕ тренировки';
+      description =
+          'Тренировка завершена — загрузите итоговое фото в течение часа после окончания.';
+      icon = Icons.flag;
+      color = Colors.green.shade700;
+    } else {
+      title = 'Фото ДО тренировки';
+      description =
+          'Сделайте снимок зала минимум за 10 минут до начала и загрузите его перед стартом.';
+      icon = Icons.camera_alt_outlined;
+      color = Colors.orange.shade700;
+    }
+
+    if (status == TrainingSessionStatus.started &&
+        effectiveType == 'training_before') {
+      description =
+          'Тренировка уже начата. Перед следующей тренировкой добавьте фото ДО заранее.';
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: 0.05),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLatestPhotoPreview() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -558,6 +677,27 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       return cleaning.isEmpty ? null : cleaning;
     }
     return null;
+  }
+
+  String get _effectiveType {
+    if (_selectedType.startsWith('training')) {
+      return _resolveTrainingTypeForStatus();
+    }
+    return _selectedType;
+  }
+
+  String _resolveTrainingTypeForStatus() {
+    if (_selectedTrainingId == null) return 'training_before';
+    final status = _selectedTrainingStatus;
+    if (status == TrainingSessionStatus.finished) {
+      return 'training_after';
+    }
+    return 'training_before';
+  }
+
+  TrainingSessionStatus? get _selectedTrainingStatus {
+    if (_selectedTrainingId == null) return null;
+    return _sessionStatuses[_selectedTrainingId!];
   }
 
   void _handleTypeChange(String type) {
@@ -851,6 +991,37 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     final base = ApiConfig.baseUrl.replaceFirst('/api', '');
     final normalized = path.startsWith('/') ? path.substring(1) : path;
     return '$base/$normalized';
+  }
+
+  InputDecoration get _trainingDropdownDecoration => InputDecoration(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.grey),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.grey),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      );
+
+  String get _submitButtonText {
+    final type = _effectiveType;
+    switch (type) {
+      case 'training_before':
+        return 'Отправить фото ДО';
+      case 'training_after':
+        return 'Отправить фото ПОСЛЕ';
+      case 'cleaning':
+        return 'Отправить отчёт';
+      default:
+        return 'Отправить';
+    }
   }
 }
 

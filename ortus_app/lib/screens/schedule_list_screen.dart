@@ -83,11 +83,11 @@ class _ScheduleListScreenState extends State<ScheduleListScreen> {
   }
 
   bool _isFinishWindowOpen(ScheduleModel schedule) {
-    final start = _combineTime(schedule.startTime);
     final end = _combineTime(schedule.endTime);
     final now = DateTime.now();
-    final finishDeadline = end.add(const Duration(hours: 1));
-    return now.isAfter(start) && now.isBefore(finishDeadline);
+    final windowStart = end.subtract(const Duration(minutes: 5));
+    final windowEnd = end.add(const Duration(hours: 1));
+    return now.isAfter(windowStart) && now.isBefore(windowEnd);
   }
 
   Future<void> _handleStart(ScheduleModel schedule) async {
@@ -348,6 +348,7 @@ class _ScheduleCard extends StatelessWidget {
                       label: const Text('Завершить'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white, 
                       ),
                     ),
                   ),

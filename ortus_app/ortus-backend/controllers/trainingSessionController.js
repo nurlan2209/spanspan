@@ -143,26 +143,15 @@ const finishSession = async (req, res) => {
         .json({ session, message: "Тренировка уже завершена." });
     }
 
-    const { startOfDay, endOfDay } = getDayRange(sessionDate);
-    const afterPhoto = await PhotoReport.findOne({
-      type: "training_after",
-      relatedId: scheduleId,
-      createdAt: { $gte: startOfDay, $lte: endOfDay },
-    }).sort({ createdAt: -1 });
-
-    if (!afterPhoto) {
-      return res.status(400).json({
-        message:
-          "Сначала загрузите фото ПОСЛЕ тренировки. Сделайте это в разделе фотоотчётов.",
-      });
-    }
-
     session.status = "finished";
     session.finishedAt = new Date();
-    session.afterPhotoReportId = afterPhoto._id;
     await session.save();
 
-    res.json({ session });
+    res.json({
+      session,
+      message:
+        "Тренировка завершена. Не забудьте добавить фото ПОСЛЕ в разделе фотоотчётов.",
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

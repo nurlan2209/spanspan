@@ -27,6 +27,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   bool _isLoading = false;
   bool _attendanceAllowed = true;
   bool _checkingGate = false;
+  bool _attendanceFinalized = false;
   final _sessionService = TrainingSessionService();
 
   final statuses = {
@@ -107,7 +108,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 child: CircularProgressIndicator(color: AppColors.primary),
               )
             else if (_attendanceRecords.isNotEmpty && _canWorkWithAttendance)
-              _buildAttendanceList(),
+              _buildAttendanceSection(),
           ],
         ),
       ),
@@ -136,26 +137,31 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 .where((g) => g.trainerName == user?.fullName)
                 .toList();
 
-            return DropdownButtonFormField<String>(
-              initialValue: _selectedGroupId,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            return InputDecorator(
+              decoration: _dropdownDecoration,
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedGroupId,
+                  isExpanded: true,
+                  hint: const Text('Выберите группу'),
+                  items: myGroups
+                      .map(
+                        (group) => DropdownMenuItem(
+                          value: group.id,
+                          child: Text(group.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedGroupId = val;
+                      _selectedScheduleId = null;
+                      _attendanceRecords = [];
+                      _attendanceFinalized = false;
+                    });
+                  },
                 ),
               ),
-              items: myGroups.map((group) {
-                return DropdownMenuItem(
-                  value: group.id,
-                  child: Text(group.name),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedGroupId = val;
-                  _selectedScheduleId = null;
-                  _attendanceRecords = [];
-                });
-              },
             );
           },
         ),
@@ -208,28 +214,32 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
               });
             }
 
-            return DropdownButtonFormField<String>(
-              initialValue: currentValue,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+            return InputDecorator(
+              decoration: _dropdownDecoration,
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: currentValue,
+                  isExpanded: true,
+                  items: schedules
+                      .map(
+                        (schedule) => DropdownMenuItem(
+                          value: schedule.id,
+                          child: Text(
+                            '${schedule.dayName} ${schedule.startTime}-${schedule.endTime}',
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedScheduleId = val;
+                      _attendanceRecords = [];
+                      _attendanceFinalized = false;
+                    });
+                    _checkAttendanceAccess();
+                  },
                 ),
               ),
-              items: schedules.map((schedule) {
-                return DropdownMenuItem(
-                  value: schedule.id,
-                  child: Text(
-                    '${schedule.dayName} ${schedule.startTime}-${schedule.endTime}',
-                  ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedScheduleId = val;
-                  _attendanceRecords = [];
-                });
-                _checkAttendanceAccess();
-              },
             );
           },
         ),
@@ -290,6 +300,23 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
       _selectedDate.day == DateTime.now().day;
 
   bool get _canWorkWithAttendance => !_isTodaySelected || _attendanceAllowed;
+
+  InputDecoration get _dropdownDecoration => InputDecoration(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.grey),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.grey),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+      );
 
   Widget _buildLockedMessage() {
     return Container(
@@ -366,6 +393,17 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     }
   }
 
+  Widget _buildAttendanceSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildAttendanceList(),
+        const SizedBox(height: 16),
+        _buildFinalizeControls(),
+      ],
+    );
+  }
+
   Widget _buildAttendanceList() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,12 +413,20 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        ..._attendanceRecords.map((record) => _buildAttendanceCard(record)),
+        ..._attendanceRecords.map(
+          (record) => _buildAttendanceCard(
+            record,
+            enabled: !_attendanceFinalized,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildAttendanceCard(AttendanceModel record) {
+  Widget _buildAttendanceCard(
+    AttendanceModel record, {
+    required bool enabled,
+  }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -423,11 +469,13 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 return ChoiceChip(
                   label: Text(entry.value),
                   selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      _updateAttendance(record, entry.key);
-                    }
-                  },
+                  onSelected: enabled
+                      ? (selected) {
+                          if (selected) {
+                            _updateAttendance(record, entry.key);
+                          }
+                        }
+                      : null,
                   backgroundColor: AppColors.white,
                   selectedColor: _getStatusColor(entry.key),
                   labelStyle: TextStyle(
@@ -437,6 +485,17 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
                 );
               }).toList(),
             ),
+            if (_attendanceFinalized)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  'Отметка зафиксирована',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -491,6 +550,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
     setState(() {
       _attendanceRecords = records;
       _isLoading = false;
+      _attendanceFinalized = false;
     });
 
     if (records.isEmpty && mounted) {
@@ -501,6 +561,15 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   }
 
   void _updateAttendance(AttendanceModel record, String newStatus) async {
+    if (_attendanceFinalized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Отметки уже зафиксированы. Перезагрузите список, чтобы изменить.'),
+        ),
+      );
+      return;
+    }
     try {
       await AttendanceService().markAttendance(
         record.id,
@@ -546,5 +615,60 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
         ),
       );
     }
+  }
+
+  Widget _buildFinalizeControls() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _attendanceFinalized ? null : _finalizeAttendance,
+            icon: Icon(
+              _attendanceFinalized ? Icons.check_circle : Icons.cloud_upload,
+            ),
+            label: Text(
+              _attendanceFinalized ? 'Отметка отправлена' : 'Завершить отметку',
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: _attendanceFinalized
+                  ? Colors.green
+                  : AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.blueGrey.shade50,
+            border: Border.all(color: Colors.blueGrey.shade100),
+          ),
+          child: Text(
+            _attendanceFinalized
+                ? 'Список посещаемости отправлен. Проведите тренировку и в конце завершите её в разделе "Расписание", чтобы загрузить фото ПОСЛЕ тренировки.'
+                : 'После того как отметите всех студентов, нажмите "Завершить отметку", чтобы зафиксировать посещаемость.',
+            style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _finalizeAttendance() {
+    if (_attendanceRecords.isEmpty) return;
+    setState(() => _attendanceFinalized = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Отметки отправлены! Удачной тренировки. По завершении занятия нажмите "Завершить" в расписании и загрузите фото ПОСЛЕ.',
+        ),
+      ),
+    );
   }
 }
