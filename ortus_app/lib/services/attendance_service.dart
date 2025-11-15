@@ -31,7 +31,7 @@ class AttendanceService {
     return [];
   }
 
-  Future<bool> markAttendance(String id, String status, {String? note}) async {
+  Future<void> markAttendance(String id, String status, {String? note}) async {
     final token = await AuthService().getToken();
     final response = await http.patch(
       Uri.parse('${ApiConfig.baseUrl}/attendance/$id'),
@@ -42,7 +42,12 @@ class AttendanceService {
       body: json.encode({'status': status, 'note': note}),
     );
 
-    return response.statusCode == 200;
+    if (response.statusCode != 200) {
+      throw Exception(_messageFromResponse(
+        response.body,
+        'Не удалось обновить отметку',
+      ));
+    }
   }
 
   Future<List<AttendanceModel>> getGroupAttendanceByDate(
@@ -150,5 +155,17 @@ class AttendanceService {
       return AttendanceStats.fromJson(json.decode(response.body));
     }
     return null;
+  }
+
+  String _messageFromResponse(String body, String fallback) {
+    try {
+      final parsed = json.decode(body);
+      if (parsed is Map && parsed['message'] is String) {
+        return parsed['message'] as String;
+      }
+    } catch (_) {
+      // ignore
+    }
+    return fallback;
   }
 }

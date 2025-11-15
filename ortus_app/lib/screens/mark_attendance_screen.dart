@@ -501,14 +501,14 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
   }
 
   void _updateAttendance(AttendanceModel record, String newStatus) async {
-    final success = await AttendanceService().markAttendance(
-      record.id,
-      newStatus,
-    );
+    try {
+      await AttendanceService().markAttendance(
+        record.id,
+        newStatus,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (success) {
       setState(() {
         final index = _attendanceRecords.indexWhere((r) => r.id == record.id);
         if (index != -1) {
@@ -531,6 +531,18 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
           content: Text('Отметка обновлена: ${statuses[newStatus]}'),
           backgroundColor: _getStatusColor(newStatus),
           duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final friendly =
+          e.toString().replaceFirst('Exception: ', '').trim();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(friendly.isEmpty
+              ? 'Не удалось обновить отметку'
+              : friendly),
+          backgroundColor: Colors.red.shade400,
         ),
       );
     }

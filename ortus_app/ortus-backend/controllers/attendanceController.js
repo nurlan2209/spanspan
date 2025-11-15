@@ -145,33 +145,6 @@ const markAttendance = async (req, res) => {
     if (note) attendance.note = note;
     attendance.markedBy = req.user._id;
 
-    if (
-      attendance.scheduleId &&
-      ["present", "absent", "sick", "excused"].includes(status)
-    ) {
-      const scheduleId =
-        typeof attendance.scheduleId === "object"
-          ? attendance.scheduleId._id
-          : attendance.scheduleId;
-
-      const attendanceDate = attendance.date
-        ? new Date(attendance.date)
-        : new Date();
-      const { startOfDay, endOfDay } = getDayRange(attendanceDate);
-      const hasAfterPhoto = await PhotoReport.exists({
-        type: "training_after",
-        relatedId: scheduleId,
-        createdAt: { $gte: startOfDay, $lte: endOfDay },
-      });
-
-      if (!hasAfterPhoto) {
-        return res.status(400).json({
-          message:
-            "Завершая отметки, загрузите фото ПОСЛЕ тренировки (зал/группа после занятия) в разделе фотоотчётов.",
-        });
-      }
-    }
-
     await attendance.save();
     await attendance.populate("studentId", "fullName phoneNumber");
 
