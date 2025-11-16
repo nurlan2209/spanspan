@@ -50,6 +50,7 @@ const createOrder = async (req, res) => {
       items: orderItems,
       totalAmount,
       paymentMethod: paymentMethod || "manual",
+      status: "new",
     });
 
     // Очистить корзину после создания заказа
@@ -160,8 +161,8 @@ const cancelOrder = async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    // Можно отменить только pending заказы
-    if (order.status !== "pending") {
+    // Можно отменить только new заказы
+    if (order.status !== "new") {
       return res
         .status(400)
         .json({ message: "Cannot cancel order in this status" });

@@ -25,6 +25,7 @@ import 'screens/photo_reports/photo_report_screen.dart';
 import 'screens/photo_reports/photo_reports_gallery_screen.dart';
 import 'screens/cleaning/cleaning_report_screen.dart';
 import 'screens/cleaning/cleaning_history_screen.dart';
+import 'screens/my_orders_screen.dart';
 import 'screens/manager/create_student_screen.dart';
 
 void main() {
@@ -107,6 +108,7 @@ class MyApp extends StatelessWidget {
             const PhotoReportsGalleryScreen(),
         '/cleaning-report': (context) => const CleaningReportScreen(),
         '/cleaning-history': (context) => const CleaningHistoryScreen(),
+        '/my-orders': (context) => const MyOrdersScreen(),
       },
     );
   }

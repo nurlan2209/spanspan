@@ -64,13 +64,13 @@ class OrderModel {
 
   String get statusText {
     switch (status) {
-      case 'pending':
-        return 'Ожидает оплаты';
-      case 'paid':
-        return 'Оплачен';
+      case 'new':
+        return 'Новый';
+      case 'preparing':
+        return 'Готовится';
       case 'ready':
         return 'Готов к выдаче';
-      case 'completed':
+      case 'issued':
         return 'Выдан';
       case 'cancelled':
         return 'Отменён';

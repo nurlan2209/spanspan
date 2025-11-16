@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/order_model.dart';
+import '../models/delivery_request_model.dart';
 import 'auth_service.dart';
 
 class OrderService {
@@ -75,6 +76,48 @@ class OrderService {
       headers: {'Authorization': 'Bearer $token'},
     );
 
+    return response.statusCode == 200;
+  }
+
+  Future<bool> createDeliveryRequest(String orderId) async {
+    final token = await AuthService().getToken();
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/delivery-requests'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({'orderId': orderId}),
+    );
+    return response.statusCode == 201;
+  }
+
+  Future<List<DeliveryRequestModel>> getDeliveryRequests() async {
+    final token = await AuthService().getToken();
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/delivery-requests'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+      return data
+          .map((json) => DeliveryRequestModel.fromJson(json))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<bool> updateDeliveryStatus(String id, String status) async {
+    final token = await AuthService().getToken();
+    final response = await http.patch(
+      Uri.parse('${ApiConfig.baseUrl}/delivery-requests/$id/status'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({'status': status}),
+    );
     return response.statusCode == 200;
   }
 }

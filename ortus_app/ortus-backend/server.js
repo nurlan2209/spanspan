@@ -19,6 +19,7 @@ const photoReportRoutes = require("./routes/photoReports");
 const cleaningReportRoutes = require("./routes/cleaningReports");
 const exportRoutes = require("./routes/export");
 const trainingSessionRoutes = require("./routes/trainingSessions");
+const deliveryRoutes = require("./routes/deliveryRequests");
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use("/api/photo-reports", photoReportRoutes);
 app.use("/api/cleaning-reports", cleaningReportRoutes);
 app.use("/api/export", exportRoutes);
 app.use("/api/training-sessions", trainingSessionRoutes);
+app.use("/api/delivery-requests", deliveryRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {

@@ -5,6 +5,7 @@ import '../utils/constants.dart';
 import '../widgets/custom_button.dart';
 
 class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -68,15 +69,15 @@ class ProfileScreen extends StatelessWidget {
             if (user.groupId != null)
               _buildInfoRow(Icons.group, 'Группа', user.groupId!),
           ]),
-          if (user.isStudent || user.isParent)
+          if (user.isStudent)
             CustomButton(
-              text: 'Посещаемость',
+              text: 'Мои заказы',
               onPressed: () {
-                Navigator.pushNamed(context, '/attendance-analytics');
+                Navigator.pushNamed(context, '/my-orders');
               },
               color: Colors.blue,
             ),
-          if (user.isStudent || user.isParent) const SizedBox(height: 12),
+          if (user.isStudent) const SizedBox(height: 12),
           if (user.isTrainer) ...[
             CustomButton(
               text: 'Новости клуба',

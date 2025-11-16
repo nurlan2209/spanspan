@@ -22,6 +22,7 @@ import '../screens/shop_screen.dart';
 import '../screens/trainer/trainer_groups_screen.dart';
 import '../screens/common/placeholder_screen.dart';
 import '../utils/constants.dart';
+import '../screens/admin/orders_admin_screen.dart';
 
 class AppNavigator extends StatefulWidget {
   const AppNavigator({super.key});
@@ -98,6 +99,7 @@ class _AppNavigatorState extends State<AppNavigator> {
     if (user.isAdmin) {
       return [
         _TabItem('Товары', Icons.inventory_2, const ManageProductsScreen()),
+        _TabItem('Заказы', Icons.receipt_long, const OrdersAdminScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];
     }

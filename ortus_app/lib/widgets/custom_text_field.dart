@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 
-class CustomTextField extends StatelessWidget {
+class CustomTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
   final IconData icon;
   final bool isPassword;
 
   const CustomTextField({
+    super.key,
     required this.controller,
     required this.label,
     required this.icon,
@@ -15,13 +16,35 @@ class CustomTextField extends StatelessWidget {
   });
 
   @override
+  State<CustomTextField> createState() => _CustomTextFieldState();
+}
+
+class _CustomTextFieldState extends State<CustomTextField> {
+  bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _obscure = widget.isPassword;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return TextField(
-      controller: controller,
-      obscureText: isPassword,
+      controller: widget.controller,
+      obscureText: widget.isPassword ? _obscure : false,
       decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.primary),
+        labelText: widget.label,
+        prefixIcon: Icon(widget.icon, color: AppColors.primary),
+        suffixIcon: widget.isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscure ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.grey,
+                ),
+                onPressed: () => setState(() => _obscure = !_obscure),
+              )
+            : null,
         filled: true,
         fillColor: Colors.white,
         contentPadding:
