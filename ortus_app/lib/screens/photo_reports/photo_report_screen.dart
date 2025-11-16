@@ -45,19 +45,13 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
   bool _isLoadingLatestReports = false;
   String? _latestReportsScheduleId;
   bool _trainingsInitialized = false;
-  final DateTime _today = DateTime.now();
+  final DateTime _today = _now;
   List<ScheduleModel> _todayTrainings = [];
   Map<String, TrainingSessionStatus> _sessionStatuses = {};
   PhotoReportModel? _latestBeforeReport;
   PhotoReportModel? _latestAfterReport;
   List<XFile> _images = [];
   bool _argsApplied = false;
-
-  final _types = const {
-    'training_before': 'Фото ДО тренировки',
-    'training_after': 'Фото ПОСЛЕ тренировки',
-    'cleaning': 'Уборка (для техничек)',
-  };
 
   @override
   void initState() {
@@ -224,18 +218,10 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     final isTrainer = user?.isTrainer ?? false;
     final isTechStaff = user?.hasRole('tech_staff') ?? false;
 
-    final allowedTypes = _types.entries.where((entry) {
-      if (entry.key == 'cleaning') {
-        return isTechStaff ||
-            user?.isAdmin == true ||
-            user?.hasRole('director') == true;
-      }
-      return isTrainer ||
-          user?.isAdmin == true ||
-          user?.hasRole('director') == true;
-    }).toList();
+    final canWorkWithTraining =
+        isTrainer || user?.isAdmin == true || user?.hasRole('director') == true;
 
-    if (allowedTypes.isEmpty) {
+    if (!canWorkWithTraining && !isTechStaff) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Фотоотчёт'),
@@ -243,42 +229,6 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         ),
         body: const Center(child: Text('Нет доступа к фотоотчётам')),
       );
-    }
-
-    if (!allowedTypes.any((entry) => entry.key == _selectedType)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _handleTypeChange(allowedTypes.first.key);
-        }
-      });
-    }
-
-    final hasTrainingOption =
-        allowedTypes.any((entry) => entry.key.startsWith('training'));
-
-    final chipEntries = <MapEntry<String, String>>[];
-    if (hasTrainingOption) {
-      chipEntries.add(const MapEntry('training_before', 'Тренировка'));
-    }
-    if (allowedTypes.any((entry) => entry.key == 'cleaning')) {
-      chipEntries.add(
-        MapEntry('cleaning', _types['cleaning']!),
-      );
-    }
-
-    final validKeys = chipEntries.map((e) => e.key).toSet()
-      ..addAll(
-        allowedTypes
-            .where((entry) => entry.key == 'training_after')
-            .map((e) => e.key),
-      );
-
-    if (!validKeys.contains(_selectedType)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && chipEntries.isNotEmpty) {
-          _handleTypeChange(chipEntries.first.key);
-        }
-      });
     }
 
     return Scaffold(
@@ -290,55 +240,23 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.white),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Тип отчёта',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final entry in chipEntries)
-                  Builder(
-                    builder: (context) {
-                      final isTrainingChip = entry.key == 'training_before';
-                      final isSelected = isTrainingChip
-                          ? _selectedType.startsWith('training')
-                          : _selectedType == entry.key;
-                      return ChoiceChip(
-                        label: Text(isTrainingChip
-                            ? 'Тренировка'
-                            : entry.value),
-                        selected: isSelected,
-                        onSelected: (_) => _handleTypeChange(entry.key),
-                        selectedColor:
-                            AppColors.primary.withValues(alpha: 0.2),
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.black,
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            if (_selectedType.startsWith('training')) ...[
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _refreshTrainingOptions,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               _buildTrainingSelector(user?.isTrainer == true),
               _buildTrainingTypeBanner(),
-            ],
-            if (_selectedType == 'cleaning')
+              const SizedBox(height: 20),
               TextFormField(
-                controller: _cleaningReportController,
+                controller: _commentController,
+                maxLines: 3,
                 decoration: InputDecoration(
-                  labelText: 'ID отчёта по уборке',
+                  labelText: 'Комментарий',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: AppColors.grey),
@@ -354,57 +272,37 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
                   ),
                 ),
               ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _commentController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Комментарий',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.grey),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.grey),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: AppColors.primary, width: 2),
+              const SizedBox(height: 20),
+              _buildPhotoSection(),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: _isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.white,
+                          ),
+                        )
+                      : const Icon(Icons.cloud_upload),
+                  label: Text(
+                    _isSubmitting ? 'Отправка...' : _submitButtonText,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                  ),
+                  onPressed: (_isSubmitting || _isTrainingLocked)
+                      ? null
+                      : _submit,
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            _buildPhotoSection(),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: _isSubmitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.white,
-                        ),
-                      )
-                    : const Icon(Icons.cloud_upload),
-                label: Text(
-                  _isSubmitting ? 'Отправка...' : _submitButtonText,
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.white,
-                ),
-                onPressed: (_isSubmitting || _isTrainingLocked)
-                    ? null
-                    : _submit,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -431,19 +329,9 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const Text(
-              'Тренировка',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _isLoadingTrainings ? null : _refreshTrainingOptions,
-              tooltip: 'Обновить список',
-            ),
-          ],
+        const Text(
+          'Тренировка',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         if (_isLoadingTrainings && !_trainingsInitialized)
@@ -521,6 +409,8 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     final effectiveType = _effectiveType;
     final status = _selectedTrainingStatus;
     final hasAfter = _latestAfterReport != null;
+    final hasBefore = _latestBeforeReport != null &&
+        effectiveType == 'training_before';
     String title;
     String description;
     IconData icon;
@@ -544,6 +434,11 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           'Тренировка завершена — загрузите итоговое фото в течение 7 минут после окончания.';
       icon = Icons.flag;
       color = Colors.green.shade700;
+    } else if (hasBefore) {
+      title = 'Фото ДО загружено';
+      description = 'Фото ДО зафиксировано. Ожидайте завершения тренировки.';
+      icon = Icons.verified;
+      color = Colors.teal.shade700;
     } else {
       title = 'Фото ДО тренировки';
       description =
@@ -678,8 +573,13 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     return _selectedType;
   }
 
-  bool get _isTrainingLocked =>
-      _selectedType.startsWith('training') && _latestAfterReport != null;
+  bool get _isTrainingLocked {
+    if (!_selectedType.startsWith('training')) return false;
+    if (_effectiveType == 'training_before') {
+      return _latestBeforeReport != null;
+    }
+    return _latestAfterReport != null;
+  }
 
   String _resolveTrainingTypeForStatus() {
     if (_selectedTrainingId == null) return 'training_before';
@@ -693,23 +593,6 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
   TrainingSessionStatus? get _selectedTrainingStatus {
     if (_selectedTrainingId == null) return null;
     return _sessionStatuses[_selectedTrainingId!];
-  }
-
-  void _handleTypeChange(String type) {
-    setState(() {
-      _selectedType = type;
-      if (!type.startsWith('training')) {
-        _selectedTrainingId = null;
-        _latestBeforeReport = null;
-        _latestAfterReport = null;
-      } else if (!_trainingsInitialized) {
-        _refreshTrainingOptions();
-      }
-
-      if (type != 'cleaning') {
-        _cleaningReportController.clear();
-      }
-    });
   }
 
   Future<void> _refreshTrainingOptions() async {
@@ -760,12 +643,23 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         _trainingsInitialized = true;
       });
 
+      if (filtered.isEmpty) {
+        setState(() {
+          _selectedTrainingId = null;
+          _latestBeforeReport = null;
+          _latestAfterReport = null;
+        });
+        return;
+      }
+
       final preselected = _pendingInitialScheduleId;
       if (preselected != null &&
           filtered.any((schedule) => schedule.id == preselected)) {
         setState(() {
           _selectedTrainingId = preselected;
           _pendingInitialScheduleId = null;
+          _latestBeforeReport = null;
+          _latestAfterReport = null;
         });
         _loadLatestReportsFor(preselected);
       } else if (_selectedTrainingId != null &&
@@ -775,6 +669,8 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
         final firstId = filtered.first.id;
         setState(() {
           _selectedTrainingId = firstId;
+          _latestBeforeReport = null;
+          _latestAfterReport = null;
         });
         _loadLatestReportsFor(firstId);
       }
@@ -807,8 +703,9 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       _isLoadingLatestReports = true;
       _latestReportsScheduleId = scheduleId;
     });
+
     try {
-      final date = DateTime.now();
+      final date = _now;
       final before = await _service.getLatestReport(
         type: 'training_before',
         relatedId: scheduleId,
@@ -845,8 +742,8 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
 
   List<ScheduleModel> get _filteredTrainings {
     if (!_selectedType.startsWith('training')) return const <ScheduleModel>[];
-    final now = DateTime.now();
-    return _todayTrainings.where((schedule) {
+    final now = _now;
+    final filtered = _todayTrainings.where((schedule) {
       final status =
           _sessionStatuses[schedule.id] ?? TrainingSessionStatus.notStarted;
       if (_selectedType == 'training_before') {
@@ -858,6 +755,11 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
       }
       return true;
     }).toList();
+
+    if (filtered.isNotEmpty) return filtered;
+    // Если окна не совпали, показываем все сегодняшние тренировки,
+    // чтобы можно было выбрать нужную вручную.
+    return List<ScheduleModel>.from(_todayTrainings);
   }
 
   DateTime _combineTime(String hhmm) {
@@ -978,6 +880,8 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
     _cleaningReportController.dispose();
     super.dispose();
   }
+
+  static DateTime get _now => DateTime.now().toUtc().add(const Duration(hours: 5));
 
   String _photoUrl(String path) {
     if (path.startsWith('http')) return path;
