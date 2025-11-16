@@ -46,9 +46,18 @@ class UserService {
       }),
     );
 
-    if (response.statusCode != 201) {
-      throw Exception('Failed to create user');
+    if (response.statusCode == 201) return;
+
+    String message = 'Failed to create user';
+    try {
+      final parsed = json.decode(response.body);
+      if (parsed is Map && parsed['message'] is String) {
+        message = parsed['message'];
+      }
+    } catch (_) {
+      // keep default
     }
+    throw Exception(message);
   }
 
   Future<bool> updateProfile(Map<String, dynamic> data) async {

@@ -52,9 +52,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               return const Center(child: Text('Нет данных'));
             }
 
-            final data = snapshot.data!;
-            final overview = data['overview'];
-            final recentAttendance = data['recentAttendance'];
+            final data = snapshot.data ?? {};
+            final overview = data['overview'] ?? {};
+            final recentAttendance = data['recentAttendance'] ?? {};
             final highlights = data['highlights'] ?? {};
 
             return ListView(
@@ -119,7 +119,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(
             'Обзор ключевых показателей',
             style: TextStyle(
-              color: AppColors.white.withOpacity(0.8),
+              color: AppColors.white.withValues(alpha: 0.8),
               fontSize: 14,
             ),
           ),
@@ -136,7 +136,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               child: _buildMiniCard(
                 'Студенты',
-                '${overview['totalStudents']}',
+                '${overview['totalStudents'] ?? 0}',
                 Icons.school,
                 Colors.blue,
               ),
@@ -145,7 +145,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               child: _buildMiniCard(
                 'Группы',
-                '${overview['totalGroups']}',
+                '${overview['totalGroups'] ?? 0}',
                 Icons.group,
                 Colors.green,
               ),
@@ -158,7 +158,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               child: _buildMiniCard(
                 'Тренеры',
-                '${overview['totalTrainers']}',
+                '${overview['totalTrainers'] ?? 0}',
                 Icons.sports_martial_arts,
                 Colors.orange,
               ),
@@ -167,7 +167,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               child: _buildMiniCard(
                 'Студенты в ожидании',
-                '${overview['pendingStudents']}',
+                '${overview['pendingStudents'] ?? 0}',
                 Icons.timelapse,
                 Colors.orange,
               ),
@@ -180,7 +180,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               child: _buildMiniCard(
                 'Заказы в ожидании',
-                '${overview['pendingOrders']}',
+                '${overview['pendingOrders'] ?? 0}',
                 Icons.shopping_cart,
                 Colors.amber,
               ),
@@ -215,8 +215,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           icon: Icons.groups,
           color: Colors.green,
           items: topGroups.map((item) {
-            final rate = (item['attendanceRate'] ?? 0).toStringAsFixed(1);
-            return '${item['groupName']} — $rate%';
+            final rateVal = item['attendanceRate'] ?? 0;
+            final rate = rateVal is num
+                ? rateVal.toDouble().toStringAsFixed(1)
+                : rateVal.toString();
+            return '${item['groupName'] ?? 'Группа'} — $rate%';
           }).toList(),
         ),
         const SizedBox(height: 12),
@@ -254,9 +257,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,9 +298,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -322,63 +325,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildAlertCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: AppColors.white, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios, color: color, size: 16),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRecentAttendanceCard(Map<String, dynamic> recentAttendance) {
-    final total = recentAttendance['total'];
-    final present = recentAttendance['present'];
-    final rate = double.parse(recentAttendance['rate'].toString());
+    final total = (recentAttendance['total'] ?? 0) as num;
+    final present = (recentAttendance['present'] ?? 0) as num;
+    final rate = double.tryParse(recentAttendance['rate']?.toString() ?? '0') ??
+        0.0;
 
     return Card(
       elevation: 2,
@@ -425,9 +376,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: _getAttendanceColor(rate).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                  color: _getAttendanceColor(rate).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
                   child: Text(
                     '${rate.toStringAsFixed(1)}%',
                     style: TextStyle(
@@ -508,14 +459,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.grey.withOpacity(0.2)),
+        border: Border.all(color: AppColors.grey.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 28),

@@ -481,6 +481,33 @@ const getAttendanceAnalytics = async (req, res) => {
       { $sort: { attendanceRate: -1 } },
     ]);
 
+    const absentByGroup = await Attendance.aggregate([
+      { $match: { ...filter, status: "absent" } },
+      {
+        $group: {
+          _id: { groupId: "$groupId", studentId: "$studentId" },
+          total: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id.studentId",
+          foreignField: "_id",
+          as: "student",
+        },
+      },
+      { $unwind: "$student" },
+      {
+        $project: {
+          groupId: "$_id.groupId",
+          studentId: "$_id.studentId",
+          studentName: "$student.fullName",
+          absences: "$total",
+        },
+      },
+    ]);
+
     // Динамика посещаемости по дням
     const attendanceByDay = await Attendance.aggregate([
       { $match: filter },
@@ -633,7 +660,12 @@ const getAttendanceAnalytics = async (req, res) => {
         absent: absentCount,
         attendanceRate: parseFloat(overallRate),
       },
-      byGroup: attendanceByGroup,
+      byGroup: attendanceByGroup.map((group) => {
+        const absences = absentByGroup.filter((a) =>
+          a.groupId.equals(group.groupId)
+        );
+        return { ...group, absences };
+      }),
       byDay: attendanceByDay,
       lowAttendanceStudents,
       topAttendanceStudents,

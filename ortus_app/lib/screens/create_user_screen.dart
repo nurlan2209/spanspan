@@ -61,9 +61,9 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
 
     try {
       await UserService().createUser(
-        phoneNumber: _phoneController.text,
-        iin: _iinController.text,
-        fullName: _nameController.text,
+        phoneNumber: _phoneController.text.trim(),
+        iin: _iinController.text.trim(),
+        fullName: _nameController.text.trim(),
         dateOfBirth: _dateOfBirth!,
         userType: _selectedRole,
         password: _passwordController.text,
@@ -80,9 +80,10 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
       setState(() => _dateOfBirth = null);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      final msg = e.toString().replaceFirst('Exception: ', '').trim();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg.isEmpty ? 'Ошибка создания' : msg)),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -99,7 +100,7 @@ class _CreateUserScreenState extends State<CreateUserScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DropdownButtonFormField<String>(
-                  value: _selectedRole,
+                  initialValue: _selectedRole,
                   decoration: _outlinedField('Роль'),
                   items: roles.entries
                       .map(

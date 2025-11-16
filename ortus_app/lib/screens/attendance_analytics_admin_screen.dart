@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/user_data.dart';
 import '../services/analytics_service.dart';
 import '../utils/constants.dart';
 
@@ -23,7 +22,12 @@ class _AttendanceAnalyticsAdminScreenState
 
   void _loadAnalytics() {
     setState(() {
-      _analyticsFuture = AnalyticsService().getAttendanceAnalytics();
+      final now = DateTime.now();
+      final startOfMonth = DateTime(now.year, now.month, 1);
+      _analyticsFuture = AnalyticsService().getAttendanceAnalytics(
+        startDate: startOfMonth,
+        endDate: now,
+      );
     });
   }
 
@@ -51,26 +55,18 @@ class _AttendanceAnalyticsAdminScreenState
             return const Center(child: Text('Нет данных для отображения'));
           }
 
-          final analytics = snapshot.data!;
-          final overall = analytics['overall'];
-          final byGroup = analytics['byGroup'] as List;
-          final topStudents = (analytics['topStudents'] as List)
-              .map(
-                (s) => {
-                  'user': UserData.fromJson(s['student']),
-                  'rate': s['attendanceRate'],
-                },
-              )
-              .toList();
-          final lowAttendanceStudents =
-              (analytics['lowAttendanceStudents'] as List)
-                  .map(
-                    (s) => {
-                      'user': UserData.fromJson(s['student']),
-                      'rate': s['attendanceRate'],
-                    },
-                  )
-                  .toList();
+          final analytics = snapshot.data ?? {};
+          final overall = Map<String, dynamic>.from(
+            (analytics['overall'] ?? {}) as Map? ?? {},
+          );
+          final byGroup = List<Map<String, dynamic>>.from(
+            analytics['byGroup'] ?? const [],
+          );
+          final absencesByGroup = <String, List<Map<String, dynamic>>>{};
+          for (final group in byGroup) {
+            final abs = List<Map<String, dynamic>>.from(group['absences'] ?? []);
+            absencesByGroup[group['groupId']?.toString() ?? ''] = abs;
+          }
 
           return RefreshIndicator(
             onRefresh: () async => _loadAnalytics(),
@@ -80,18 +76,6 @@ class _AttendanceAnalyticsAdminScreenState
                 _buildOverallSummary(overall),
                 const SizedBox(height: 24),
                 _buildGroupsList(byGroup),
-                const SizedBox(height: 24),
-                _buildStudentList(
-                  '💎 Лучшие студенты',
-                  topStudents,
-                  AppColors.primary,
-                ),
-                const SizedBox(height: 24),
-                _buildStudentList(
-                  '🤔 С низкой посещаемостью',
-                  lowAttendanceStudents,
-                  Colors.redAccent,
-                ),
               ],
             ),
           );
@@ -101,9 +85,9 @@ class _AttendanceAnalyticsAdminScreenState
   }
 
   Widget _buildOverallSummary(Map<String, dynamic> overall) {
-    final double rate = overall['total'] > 0
-        ? (overall['present'] / overall['total'] * 100)
-        : 0.0;
+    final total = (overall['total'] ?? 0) as num;
+    final present = (overall['present'] ?? 0) as num;
+    final double rate = total > 0 ? (present / total * 100) : 0.0;
     return Card(
       color: AppColors.primary,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -130,9 +114,9 @@ class _AttendanceAnalyticsAdminScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              '${overall['present']} из ${overall['total']} тренировок',
+              '${overall['present'] ?? 0} из ${overall['total'] ?? 0} тренировок',
               style: TextStyle(
-                color: AppColors.white.withOpacity(0.8),
+                color: AppColors.white.withValues(alpha: 0.8),
                 fontSize: 14,
               ),
             ),
@@ -157,124 +141,131 @@ class _AttendanceAnalyticsAdminScreenState
         const SizedBox(height: 12),
         ...byGroup.map((group) {
           final rate = (group['attendanceRate'] ?? 0).toDouble();
+          final absences =
+              List<Map<String, dynamic>>.from(group['absences'] ?? const []);
           return Card(
             elevation: 2,
             margin: const EdgeInsets.only(bottom: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          group['groupName'] ?? 'Неизвестная группа',
-                          style: const TextStyle(
-                            fontSize: 17,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _showGroupDetails(group, absences),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            group['groupName'] ?? 'Неизвестная группа',
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${rate.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: rate > 75
+                                ? Colors.green
+                                : (rate > 50 ? Colors.orange : Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: rate / 100,
+                      backgroundColor: AppColors.grey.withValues(alpha: 0.3),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        rate > 75
+                            ? Colors.green
+                            : (rate > 50 ? Colors.orange : Colors.red),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Тренировок: ${group['total'] ?? 0}, посещено: ${group['present'] ?? 0}, пропусков: ${group['absent'] ?? 0}',
+                      style:
+                          const TextStyle(color: AppColors.grey, fontSize: 14),
+                    ),
+                    if (absences.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Нажмите, чтобы увидеть список пропусков',
+                          style: TextStyle(
+                            color: AppColors.primary.withValues(alpha: 0.8),
+                            fontSize: 12,
                           ),
                         ),
                       ),
-                      Text(
-                        '${rate.toStringAsFixed(1)}%',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: rate > 75
-                              ? Colors.green
-                              : (rate > 50 ? Colors.orange : Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: rate / 100,
-                    backgroundColor: AppColors.grey.withOpacity(0.3),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      rate > 75
-                          ? Colors.green
-                          : (rate > 50 ? Colors.orange : Colors.red),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${group['presentCount']} посещений из ${group['totalLessons']}',
-                    style: const TextStyle(color: AppColors.grey, fontSize: 14),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
 
-  Widget _buildStudentList(
-    String title,
-    List<Map<String, dynamic>> students,
-    Color highlightColor,
+  void _showGroupDetails(
+    Map<String, dynamic> group,
+    List<Map<String, dynamic>> absences,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.black,
-          ),
-        ),
-        const SizedBox(height: 12),
-        students.isEmpty
-            ? const Text(
-                'Нет студентов для отображения',
-                style: TextStyle(color: AppColors.grey),
-              )
-            : Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: students.map((studentData) {
-                    final user = studentData['user'] as UserData;
-                    final rate = (studentData['rate'] ?? 0).toDouble();
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: highlightColor.withOpacity(0.2),
-                        child: Text(
-                          user.fullName.isNotEmpty ? user.fullName[0] : '?',
-                          style: TextStyle(
-                            color: highlightColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      title: Text(
-                        user.fullName,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      trailing: Text(
-                        '${rate.toStringAsFixed(1)}%',
-                        style: TextStyle(
-                          color: highlightColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    );
-                  }).toList(),
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                group['groupName'] ?? 'Группа',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-      ],
+              const SizedBox(height: 8),
+              Text(
+                'Тренировок: ${group['total'] ?? 0} • Посещено: ${group['present'] ?? 0} • Пропусков: ${group['absent'] ?? 0}',
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Пропуски по студентам',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              if (absences.isEmpty)
+                const Text('Нет данных о пропусках')
+              else
+                ...absences.map(
+                  (item) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(item['studentName'] ?? 'Без имени'),
+                    trailing: Text('${item['absences'] ?? 0}'),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -65,16 +65,12 @@ class _GroupComparisonScreenState extends State<GroupComparisonScreen> {
             dynamic aValue, bValue;
             switch (_sortColumnIndex) {
               case 1:
-                aValue = a['totalRevenue'];
-                bValue = b['totalRevenue'];
-                break;
-              case 2:
-                aValue = a['attendanceRate'];
-                bValue = b['attendanceRate'];
+                aValue = a['attendanceRate'] ?? 0;
+                bValue = b['attendanceRate'] ?? 0;
                 break;
               default:
-                aValue = a['groupName'];
-                bValue = b['groupName'];
+                aValue = a['groupName'] ?? '';
+                bValue = b['groupName'] ?? '';
             }
             return _isAscending
                 ? Comparable.compare(aValue, bValue)
@@ -89,24 +85,17 @@ class _GroupComparisonScreenState extends State<GroupComparisonScreen> {
               columns: [
                 DataColumn(label: const Text('Группа'), onSort: _onSort),
                 DataColumn(
-                  label: const Text('Доход'),
-                  numeric: true,
-                  onSort: _onSort,
-                ),
-                DataColumn(
                   label: const Text('Посещаемость'),
                   numeric: true,
                   onSort: _onSort,
                 ),
               ],
               rows: data.map((group) {
-                final double revenue = (group['totalRevenue'] ?? 0).toDouble();
                 final double attendance = (group['attendanceRate'] ?? 0)
                     .toDouble();
                 return DataRow(
                   cells: [
                     DataCell(Text(group['groupName'] ?? 'N/A')),
-                    DataCell(Text('${revenue.toStringAsFixed(0)} ₸')),
                     DataCell(Text('${attendance.toStringAsFixed(1)}%')),
                   ],
                 );
