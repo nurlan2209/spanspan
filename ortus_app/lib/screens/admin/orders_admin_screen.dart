@@ -40,6 +40,8 @@ class _OrdersAdminScreenState extends State<OrdersAdminScreen>
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.primary,
+          labelColor: AppColors.white, 
+          unselectedLabelColor: AppColors.white,
           tabs: const [
             Tab(text: 'Все заказы'),
             Tab(text: 'Заявки на доставку'),
@@ -49,14 +51,8 @@ class _OrdersAdminScreenState extends State<OrdersAdminScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _OrdersTab(
-            future: _ordersFuture,
-            onRefresh: _load,
-          ),
-          _DeliveryTab(
-            future: _deliveryFuture,
-            onRefresh: _load,
-          ),
+          _OrdersTab(future: _ordersFuture, onRefresh: _load),
+          _DeliveryTab(future: _deliveryFuture, onRefresh: _load),
         ],
       ),
     );
@@ -216,7 +212,9 @@ class _StatusSelectorState extends State<_StatusSelector> {
         const Text('Статус:'),
         const SizedBox(width: 8),
         DropdownButton<String>(
-          value: widget.current,
+          value: statuses.contains(widget.current)
+              ? widget.current
+              : statuses.first,
           onChanged: _loading
               ? null
               : (val) async {
@@ -239,7 +237,12 @@ class _StatusSelectorState extends State<_StatusSelector> {
                   }
                 },
           items: statuses
-              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+              .map(
+                (s) => DropdownMenuItem(
+                  value: s,
+                  child: Text(_statusLabel(s)),
+                ),
+              )
               .toList(),
         ),
         if (_loading)
@@ -253,6 +256,23 @@ class _StatusSelectorState extends State<_StatusSelector> {
           ),
       ],
     );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'new':
+        return 'Новый';
+      case 'preparing':
+        return 'Готовится';
+      case 'ready':
+        return 'Готов к выдаче';
+      case 'issued':
+        return 'Выдан';
+      case 'cancelled':
+        return 'Отменён';
+      default:
+        return status;
+    }
   }
 }
 
@@ -395,9 +415,16 @@ class _DeliveryStatusSelectorState extends State<_DeliveryStatusSelector> {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      initialValue: widget.current,
+      initialValue: statuses.contains(widget.current)
+          ? widget.current
+          : statuses.first,
       items: statuses
-          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+          .map(
+            (s) => DropdownMenuItem(
+              value: s,
+              child: Text(_statusLabel(s)),
+            ),
+          )
           .toList(),
       onChanged: _loading
           ? null
@@ -421,5 +448,20 @@ class _DeliveryStatusSelectorState extends State<_DeliveryStatusSelector> {
               }
             },
     );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'new':
+        return 'Новая';
+      case 'in_progress':
+        return 'В процессе';
+      case 'delivered':
+        return 'Доставлена';
+      case 'cancelled':
+        return 'Отменена';
+      default:
+        return status;
+    }
   }
 }

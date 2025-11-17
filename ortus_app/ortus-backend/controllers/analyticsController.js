@@ -872,7 +872,6 @@ const getDashboard = async (req, res) => {
       { $limit: 3 },
     ]);
 
-    // ТОП-3 тренера по активности фотоотчётов (последние 30 дней)
     const topTrainersByPhotoReports = await PhotoReport.aggregate([
       {
         $match: {
@@ -907,10 +906,23 @@ const getDashboard = async (req, res) => {
     ]);
 
     // Последние 5 фотоотчётов
-    const latestPhotoReports = await PhotoReport.find()
+    const latestPhotoReportsRaw = await PhotoReport.find()
       .sort({ createdAt: -1 })
       .limit(5)
       .populate("authorId", "fullName userType");
+
+    const latestPhotoReports = latestPhotoReportsRaw.map((report) => {
+      const typeLabels = {
+        training_before: "Фото ДО тренировки",
+        training_after: "Фото ПОСЛЕ тренировки",
+        cleaning: "Уборка",
+      };
+      const doc = report.toObject({ getters: true });
+      return {
+        ...doc,
+        typeLabel: typeLabels[report.type] || report.type,
+      };
+    });
 
     res.json({
       overview: {

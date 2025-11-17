@@ -149,7 +149,7 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Не удалось назначить студента'),
+          content: Text('Не удалось назначить ученика'),
           backgroundColor: Colors.red,
         ),
       );
@@ -166,7 +166,7 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.black,
           title: const Text(
-            'Новые студенты',
+            'Новые ученики',
             style: TextStyle(
               color: Colors.white, // белый цвет текста
             ),
@@ -497,7 +497,7 @@ class _PendingStudentsScreenState extends State<PendingStudentsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Карточка студента',
+                          'Карточка ученика',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,

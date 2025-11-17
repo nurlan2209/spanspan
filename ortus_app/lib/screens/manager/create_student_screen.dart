@@ -50,7 +50,7 @@ class _CreateStudentScreenState extends State<CreateStudentScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Карточка студента',
+                'Карточка ученика',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 16),

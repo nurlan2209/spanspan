@@ -247,7 +247,7 @@ class _AttendanceAnalyticsAdminScreenState
               ),
               const SizedBox(height: 12),
               const Text(
-                'Пропуски по студентам',
+                'Пропуски по ученикам',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),

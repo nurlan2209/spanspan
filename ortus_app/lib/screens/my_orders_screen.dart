@@ -97,13 +97,18 @@ class _OrderCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Заказ ${order.id}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
+                  Expanded(
+                    child: Text(
+                      'Заказ ${order.id}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   _StatusChip(status: order.status),
                 ],
               ),
@@ -145,19 +150,24 @@ class _OrderCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
                     'Заказ ${order.id}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  _StatusChip(status: order.status),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                _StatusChip(status: order.status),
+              ],
+            ),
               const SizedBox(height: 12),
               ...order.items.map(
                 (item) => ListTile(
@@ -201,9 +211,11 @@ class _DeliveryRequestButtonState extends State<_DeliveryRequestButton> {
 
   @override
   Widget build(BuildContext context) {
-    final canRequest = !_requested &&
+    final canRequest =
+        !_requested &&
         widget.status != 'cancelled' &&
         widget.status != 'issued';
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
@@ -218,12 +230,15 @@ class _DeliveryRequestButtonState extends State<_DeliveryRequestButton> {
                 ),
               )
             : const Icon(Icons.local_shipping_outlined),
-        label: Text(
-          _requested ? 'Заявка отправлена' : 'Заказать доставкой',
+        label: const Text(
+          'Заказать доставкой',
+          style: TextStyle(color: Colors.white),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              canRequest ? AppColors.primary : Colors.grey.shade400,
+          backgroundColor: canRequest
+              ? AppColors.primary
+              : Colors.grey.shade400,
+          foregroundColor: Colors.white,
         ),
       ),
     );
@@ -273,23 +288,35 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color color;
+    String label;
     switch (status) {
-      case 'paid':
-      case 'ready':
-        color = Colors.orange;
+      case 'new':
+        color = Colors.blueGrey;
+        label = 'Новый';
         break;
-      case 'completed':
+      case 'preparing':
+        color = Colors.orange;
+        label = 'Готовится';
+        break;
+      case 'ready':
+        color = Colors.teal;
+        label = 'Готов к выдаче';
+        break;
+      case 'issued':
         color = Colors.green;
+        label = 'Выдан';
         break;
       case 'cancelled':
         color = Colors.red;
+        label = 'Отменён';
         break;
       default:
         color = Colors.blueGrey;
+        label = status;
     }
 
     return Chip(
-      label: Text(status),
+      label: Text(label),
       backgroundColor: color.withValues(alpha: 0.1),
       labelStyle: TextStyle(color: color, fontWeight: FontWeight.w600),
     );

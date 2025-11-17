@@ -182,7 +182,7 @@ class _CreateScheduleScreenState extends State<CreateScheduleScreen> {
                   border: Border.all(color: Colors.red.shade200),
                 ),
                 child: Text(
-                  'В этой группе пока нет студентов. Добавьте их перед созданием расписания.',
+                  'В этой группе пока нет учеников. Добавьте их перед созданием расписания.',
                   style: TextStyle(color: Colors.red.shade400),
                 ),
               )
@@ -309,7 +309,7 @@ class _CreateScheduleScreenState extends State<CreateScheduleScreen> {
     if (!_groupHasStudents) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Добавьте хотя бы одного студента в группу.'),
+          content: Text('Добавьте хотя бы одного ученика в группу.'),
           backgroundColor: Colors.red,
         ),
       );

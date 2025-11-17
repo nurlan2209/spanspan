@@ -16,7 +16,7 @@ class StudentSelectorScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: AppColors.black,
           title: const Text(
-            'Выбор студента',
+            'Выбор ученика',
             style: TextStyle(color: AppColors.white),
           ),
         ),
@@ -24,7 +24,7 @@ class StudentSelectorScreen extends StatelessWidget {
       );
     }
 
-    // Если студент - сразу показываем его посещаемость
+    // Если ученик - сразу показываем его посещаемость
     if (user.isStudent) {
       return AttendanceAnalyticsScreen(studentId: user.id);
     }
@@ -99,7 +99,7 @@ class StudentSelectorScreen extends StatelessWidget {
           style: TextStyle(color: AppColors.white),
         ),
       ),
-      body: const Center(child: Text('Нет доступных студентов')),
+      body: const Center(child: Text('Нет доступных учеников')),
     );
   }
 }

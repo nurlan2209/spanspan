@@ -656,7 +656,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
           child: Text(
             _attendanceFinalized
                 ? 'Список посещаемости отправлен. Проведите тренировку и в конце завершите её в разделе "Расписание", чтобы загрузить фото ПОСЛЕ тренировки.'
-                : 'После того как отметите всех студентов, нажмите "Завершить отметку", чтобы зафиксировать посещаемость.',
+                : 'После того как отметите всех учеников, нажмите "Завершить отметку", чтобы зафиксировать посещаемость.',
             style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13),
           ),
         ),
@@ -708,7 +708,7 @@ class _MarkAttendanceScreenState extends State<MarkAttendanceScreen> {
 
     if (records.isEmpty && createIfEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нет студентов в группе')),
+        const SnackBar(content: Text('Нет учеников в группе')),
       );
     }
   }

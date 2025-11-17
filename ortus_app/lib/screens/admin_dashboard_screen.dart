@@ -413,7 +413,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
         _buildAnalyticsButton(
           'Аналитика посещаемости',
-          'Статистика по группам и студентам',
+          'Статистика по группам и ученикам',
           Icons.bar_chart,
           Colors.blue,
           () {

@@ -124,7 +124,7 @@ class _TrainerGroupsScreenState extends State<TrainerGroupsScreen> {
                               const Padding(
                                 padding: EdgeInsets.all(16),
                                 child: Text(
-                                  'У этой группы пока нет студентов.',
+                                  'У этой группы пока нет учеников.',
                                   style: TextStyle(color: AppColors.grey),
                                 ),
                               )

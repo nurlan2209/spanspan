@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/payment_service.dart';
-import '../services/user_service.dart';
 import '../services/group_service.dart';
-import '../models/user_data.dart';
 import '../models/group_model.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_button.dart';
@@ -65,7 +63,7 @@ class _CreatePaymentScreenState extends State<CreatePaymentScreen> {
                   return const CircularProgressIndicator();
                 }
                 return DropdownButtonFormField<String>(
-                  value: _selectedGroupId,
+                  initialValue: _selectedGroupId,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -98,19 +96,15 @@ class _CreatePaymentScreenState extends State<CreatePaymentScreen> {
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const SizedBox();
 
-                  final group = snapshot.data!.firstWhere(
-                    (g) => g.id == _selectedGroupId,
-                  );
-
-                  // В реальности нужен отдельный API для получения студентов группы
+                  // В реальности нужен отдельный API для получения учеников группы
                   // Пока используем заглушку
                   return DropdownButtonFormField<String>(
-                    value: _selectedStudentId,
+                    initialValue: _selectedStudentId,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      hintText: 'Выберите студента',
+                      hintText: 'Выберите ученика',
                     ),
                     items: const [],
                     onChanged: (val) =>
@@ -122,7 +116,7 @@ class _CreatePaymentScreenState extends State<CreatePaymentScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.grey.withOpacity(0.1),
+                  color: AppColors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text('Сначала выберите группу'),
@@ -205,7 +199,7 @@ class _CreatePaymentScreenState extends State<CreatePaymentScreen> {
     if (_selectedStudentId == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Выберите студента')));
+      ).showSnackBar(const SnackBar(content: Text('Выберите ученика')));
       return;
     }
 
