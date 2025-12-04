@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/order_model.dart';
 import '../services/order_service.dart';
 import '../utils/constants.dart';
@@ -81,6 +82,7 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = order.createdAt.toLocal();
+    final dateText = DateFormat('dd.MM.y HH:mm').format(date);
     final summary = order.items
         .take(3)
         .map((e) => '${e.name} x${e.quantity}')
@@ -113,22 +115,48 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                'Дата: ${date.toLocal()}',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              Row(
+                children: [
+                  const Icon(Icons.schedule, size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Text(
+                    dateText,
+                    style:
+                        TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
-              Text(
-                summary.isEmpty ? 'Товары: ${order.items.length}' : summary,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.receipt_long_outlined,
+                      size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      summary.isEmpty
+                          ? 'Товаров: ${order.items.length}'
+                          : summary,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Сумма: ${order.totalAmount.toStringAsFixed(0)} ₸',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.payments_outlined,
+                      size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Сумма: ${order.totalAmount.toStringAsFixed(0)} ₸',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -144,51 +172,55 @@ class _OrderCard extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-            Row(
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    'Заказ ${order.id}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Заказ ${order.id}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 8),
+                    _StatusChip(status: order.status),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...order.items.map(
+                  (item) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(item.name),
+                    subtitle:
+                        Text('Размер: ${item.size} • ${item.quantity} шт.'),
+                    trailing: Text(
+                      '${(item.price * item.quantity).toStringAsFixed(0)} ₸',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                _StatusChip(status: order.status),
+                const SizedBox(height: 8),
+                Text(
+                  'Итого: ${order.totalAmount.toStringAsFixed(0)} ₸',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                _DeliveryRequestButton(orderId: order.id, status: order.status),
               ],
             ),
-              const SizedBox(height: 12),
-              ...order.items.map(
-                (item) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(item.name),
-                  subtitle: Text('Размер: ${item.size} • ${item.quantity} шт.'),
-                  trailing: Text(
-                    '${(item.price * item.quantity).toStringAsFixed(0)} ₸',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Итого: ${order.totalAmount.toStringAsFixed(0)} ₸',
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              _DeliveryRequestButton(orderId: order.id, status: order.status),
-            ],
           ),
         );
       },

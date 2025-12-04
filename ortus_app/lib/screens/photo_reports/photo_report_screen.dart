@@ -249,32 +249,66 @@ class _PhotoReportScreenState extends State<PhotoReportScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTrainingSelector(user?.isTrainer == true),
-              _buildTrainingTypeBanner(),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _commentController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: 'Комментарий',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.grey),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.grey),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: AppColors.primary, width: 2),
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTrainingSelector(user?.isTrainer == true),
+                      _buildTrainingTypeBanner(),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              _buildPhotoSection(),
-              const SizedBox(height: 30),
+              const SizedBox(height: 16),
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Комментарий и фото',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _commentController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          labelText: 'Комментарий',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.grey),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.grey),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                                color: AppColors.primary, width: 2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPhotoSection(),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(

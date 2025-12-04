@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../models/order_model.dart';
 import '../../models/delivery_request_model.dart';
 import '../../services/order_service.dart';
@@ -104,6 +105,9 @@ class _OrderAdminCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = order.createdAt.toLocal();
+    final dateText = DateFormat('dd.MM.y HH:mm').format(date);
+    final statusMeta = _statusMeta(order.status);
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -115,18 +119,81 @@ class _OrderAdminCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Заказ ${order.id}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Заказ ${order.id}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Chip(
+                    label: Text(statusMeta.$1),
+                    backgroundColor: statusMeta.$2.withValues(alpha: 0.12),
+                    labelStyle: TextStyle(
+                      color: statusMeta.$2,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.schedule, size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Text(
+                    dateText,
+                    style:
+                        TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
-              Text(
-                'Создан: $date',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              Row(
+                children: [
+                  const Icon(Icons.payments_outlined,
+                      size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Text('Сумма: ${order.totalAmount.toStringAsFixed(0)} ₸'),
+                ],
               ),
               const SizedBox(height: 6),
-              Text('Сумма: ${order.totalAmount.toStringAsFixed(0)} ₸'),
-              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.person_outline,
+                      size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Ученик: ${order.userId}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.local_shipping_outlined,
+                      size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Способ: ${order.paymentMethod}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               _StatusSelector(
                 orderId: order.id,
                 current: order.status,
@@ -146,38 +213,58 @@ class _OrderAdminCard extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Заказ ${order.id}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ...order.items.map(
-                (item) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(item.name),
-                  subtitle: Text('Размер: ${item.size} • ${item.quantity} шт.'),
-                  trailing: Text(
-                    '${(item.price * item.quantity).toStringAsFixed(0)} ₸',
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Заказ ${order.id}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text('Итого: ${order.totalAmount.toStringAsFixed(0)} ₸'),
-            ],
+                const SizedBox(height: 12),
+                ...order.items.map(
+                  (item) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(item.name),
+                    subtitle:
+                        Text('Размер: ${item.size} • ${item.quantity} шт.'),
+                    trailing: Text(
+                      '${(item.price * item.quantity).toStringAsFixed(0)} ₸',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text('Итого: ${order.totalAmount.toStringAsFixed(0)} ₸'),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  (String, Color) _statusMeta(String status) {
+    switch (status) {
+      case 'new':
+        return ('Новый', Colors.blueGrey);
+      case 'preparing':
+        return ('Готовится', Colors.orange);
+      case 'ready':
+        return ('Готов к выдаче', Colors.teal);
+      case 'issued':
+        return ('Выдан', Colors.green);
+      case 'cancelled':
+        return ('Отменён', Colors.red);
+      default:
+        return (status, Colors.blueGrey);
+    }
   }
 }
 
@@ -322,6 +409,10 @@ class _DeliveryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final created =
+        DateFormat('dd.MM.y HH:mm').format(request.createdAt.toLocal());
+    final statusMeta = _deliveryMeta(request.status);
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
@@ -332,14 +423,45 @@ class _DeliveryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Заявка ${request.id}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text('Заявка ${request.id}',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                  const SizedBox(width: 8),
+                  Chip(
+                    label: Text(statusMeta.$1),
+                    backgroundColor: statusMeta.$2.withValues(alpha: 0.12),
+                    labelStyle: TextStyle(
+                      color: statusMeta.$2,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 6),
-              Text('Заказ: ${request.orderId}'),
-              Text('Студент: ${request.studentName}'),
+              Row(
+                children: [
+                  const Icon(Icons.schedule, size: 16, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Text(
+                    created,
+                    style:
+                        TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text('Заказ: ${request.orderId}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text('Ученик: ${request.studentName}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
               Text('Телефон: ${request.phoneNumber}'),
-              Text('Статус: ${request.status}'),
             ],
           ),
         ),
@@ -354,32 +476,34 @@ class _DeliveryCard extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Заявка ${request.id}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Заявка ${request.id}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text('Заказ: ${request.orderId}'),
-              Text('Студент: ${request.studentName}'),
-              Text('Телефон: ${request.phoneNumber}'),
-              Text('Состав: ${request.summary}'),
-              Text('Самовывоз: ${request.pickupAddress}'),
-              const SizedBox(height: 12),
-              _DeliveryStatusSelector(
-                id: request.id,
-                current: request.status,
-                onChanged: onRefresh,
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text('Заказ: ${request.orderId}'),
+                Text('Ученик: ${request.studentName}'),
+                Text('Телефон: ${request.phoneNumber}'),
+                Text('Состав: ${request.summary}'),
+                Text('Самовывоз: ${request.pickupAddress}'),
+                const SizedBox(height: 12),
+                _DeliveryStatusSelector(
+                  id: request.id,
+                  current: request.status,
+                  onChanged: onRefresh,
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -463,5 +587,21 @@ class _DeliveryStatusSelectorState extends State<_DeliveryStatusSelector> {
       default:
         return status;
     }
+  }
+
+}
+
+(String, Color) _deliveryMeta(String status) {
+  switch (status) {
+    case 'new':
+      return ('Новая', Colors.blueGrey);
+    case 'in_progress':
+      return ('В процессе', Colors.orange);
+    case 'delivered':
+      return ('Доставлена', Colors.green);
+    case 'cancelled':
+      return ('Отменена', Colors.red);
+    default:
+      return (status, Colors.blueGrey);
   }
 }

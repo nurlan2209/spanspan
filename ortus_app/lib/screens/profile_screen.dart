@@ -12,89 +12,136 @@ class ProfileScreen extends StatelessWidget {
     final user = authProvider.user;
 
     if (user == null) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(24),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(user),
+            const SizedBox(height: 24),
+            const Text(
+              'Контакты',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            _buildInfoCard([
+              _buildInfoRow(Icons.phone, 'Телефон', user.phoneNumber),
+              _buildInfoRow(Icons.credit_card, 'ИИН', user.iin),
+              _buildInfoRow(
+                Icons.cake,
+                'Дата рождения',
+                user.dateOfBirth.toLocal().toString().split(' ')[0],
+              ),
+              if (user.groupId != null)
+                _buildInfoRow(Icons.group, 'Группа', user.groupId!),
+            ]),
+            const SizedBox(height: 24),
+            const Text(
+              'Действия',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 1,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    if (user.isStudent)
+                      CustomButton(
+                        text: 'Мои заказы',
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/my-orders');
+                        },
+                        color: Colors.blue,
+                      ),
+                    if (user.isStudent) const SizedBox(height: 12),
+                    if (user.isTrainer) ...[
+                      CustomButton(
+                        text: 'Новости клуба',
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/news');
+                        },
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    CustomButton(
+                      text: 'Выйти',
+                      onPressed: () {
+                        authProvider.logout();
+                        Navigator.pushReplacementNamed(context, '/login');
+                      },
+                      color: AppColors.black,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(dynamic user) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
       child: Column(
         children: [
           CircleAvatar(
-            radius: 60,
+            radius: 52,
             backgroundColor: AppColors.primary,
             child: Text(
               user.fullName[0].toUpperCase(),
-              style: TextStyle(
-                fontSize: 48,
+              style: const TextStyle(
+                fontSize: 42,
                 color: AppColors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 14),
           Text(
             user.fullName,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
           ),
-          SizedBox(height: 8),
-          // ✅ ИСПРАВЛЕНО: показываем все роли
+          const SizedBox(height: 8),
           Wrap(
             spacing: 8,
+            runSpacing: 6,
+            alignment: WrapAlignment.center,
             children: user.userType.map((role) {
               return Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: _getRoleColor(role),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   _getRoleLabel(role),
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               );
             }).toList(),
-          ),
-          SizedBox(height: 30),
-          _buildInfoCard([
-            _buildInfoRow(Icons.phone, 'Телефон', user.phoneNumber),
-            _buildInfoRow(Icons.credit_card, 'ИИН', user.iin),
-            _buildInfoRow(
-              Icons.cake,
-              'Дата рождения',
-              user.dateOfBirth.toLocal().toString().split(' ')[0],
-            ),
-            if (user.groupId != null)
-              _buildInfoRow(Icons.group, 'Группа', user.groupId!),
-          ]),
-          if (user.isStudent)
-            CustomButton(
-              text: 'Мои заказы',
-              onPressed: () {
-                Navigator.pushNamed(context, '/my-orders');
-              },
-              color: Colors.blue,
-            ),
-          if (user.isStudent) const SizedBox(height: 12),
-          if (user.isTrainer) ...[
-            CustomButton(
-              text: 'Новости клуба',
-              onPressed: () {
-                Navigator.pushNamed(context, '/news');
-              },
-              color: AppColors.primary,
-            ),
-            const SizedBox(height: 12),
-          ],
-          CustomButton(
-            text: 'Выйти',
-            onPressed: () {
-              authProvider.logout();
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-            color: AppColors.black,
           ),
         ],
       ),
@@ -150,7 +197,7 @@ class ProfileScreen extends StatelessWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(children: children),
       ),
     );
@@ -158,16 +205,16 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Icon(icon, color: AppColors.primary, size: 20),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Text(
             '$label:',
             style: TextStyle(fontSize: 14, color: AppColors.grey),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
