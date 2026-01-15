@@ -2,43 +2,19 @@ const express = require("express");
 const {
   getProfile,
   updateProfile,
-  addChild,
-  createUserByDirector,
-  getPendingStudents,
-  createParentForStudent,
-  attachExistingParent,
-  assignStudentToGroup,
-  createStudentByManager,
-  getAllStudents,
-  getStaff,
-  updateUserStatus,
-  getActiveTrainers,
-  getParentsList,
+  createStaff,
+  listStaff,
+  updateStaffStatus,
+  deleteStaff,
 } = require("../controllers/userController");
 const { protect } = require("../middlewares/authMiddleware");
 const router = express.Router();
 
 router.get("/profile", protect, getProfile);
 router.put("/profile", protect, updateProfile);
-router.post("/add-child", protect, addChild);
-router.post("/create-user", protect, createUserByDirector);
-router.post("/create-student", protect, createStudentByManager);
-router.get("/pending", protect, getPendingStudents);
-router.post(
-  "/students/:id/create-parent",
-  protect,
-  createParentForStudent
-);
-router.post(
-  "/students/:id/attach-parent",
-  protect,
-  attachExistingParent
-);
-router.patch("/:id/assign-group", protect, assignStudentToGroup);
-router.get("/students", protect, getAllStudents);
-router.get("/staff", protect, getStaff);
-router.patch("/:id/status", protect, updateUserStatus);
-router.get("/trainers", protect, getActiveTrainers);
-router.get("/parents", protect, getParentsList);
+router.get("/staff", protect, listStaff);
+router.post("/staff", protect, createStaff);
+router.patch("/staff/:id/status", protect, updateStaffStatus);
+router.delete("/staff/:id", protect, deleteStaff);
 
 module.exports = router;

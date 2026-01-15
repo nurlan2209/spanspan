@@ -30,14 +30,7 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 12),
             _buildInfoCard([
               _buildInfoRow(Icons.phone, 'Телефон', user.phoneNumber),
-              _buildInfoRow(Icons.credit_card, 'ИИН', user.iin),
-              _buildInfoRow(
-                Icons.cake,
-                'Дата рождения',
-                user.dateOfBirth.toLocal().toString().split(' ')[0],
-              ),
-              if (user.groupId != null)
-                _buildInfoRow(Icons.group, 'Группа', user.groupId!),
+              _buildInfoRow(Icons.verified_user, 'Роль', _getRoleLabel(user.role)),
             ]),
             const SizedBox(height: 24),
             const Text(
@@ -54,25 +47,6 @@ class ProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    if (user.isStudent)
-                      CustomButton(
-                        text: 'Мои заказы',
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/my-orders');
-                        },
-                        color: Colors.blue,
-                      ),
-                    if (user.isStudent) const SizedBox(height: 12),
-                    if (user.isTrainer) ...[
-                      CustomButton(
-                        text: 'Новости клуба',
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/news');
-                        },
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(height: 12),
-                    ],
                     CustomButton(
                       text: 'Выйти',
                       onPressed: () {
@@ -125,23 +99,22 @@ class ProfileScreen extends StatelessWidget {
             spacing: 8,
             runSpacing: 6,
             alignment: WrapAlignment.center,
-            children: user.userType.map((role) {
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _getRoleColor(role),
+                  color: _getRoleColor(user.role),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  _getRoleLabel(role),
+                  _getRoleLabel(user.role),
                   style: const TextStyle(
                     color: AppColors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
         ],
       ),
@@ -152,19 +125,13 @@ class ProfileScreen extends StatelessWidget {
   Color _getRoleColor(String role) {
     switch (role) {
       case 'director':
-        return Colors.purple;
-      case 'admin':
-        return Colors.red;
+        return Colors.black;
+      case 'manager':
+        return Colors.blueGrey;
       case 'trainer':
         return Colors.orange;
-      case 'manager':
-        return Colors.blueAccent;
-      case 'tech_staff':
-        return Colors.brown;
-      case 'student':
+      case 'client':
         return AppColors.primary;
-      case 'parent':
-        return Colors.green;
       default:
         return Colors.grey;
     }
@@ -175,18 +142,12 @@ class ProfileScreen extends StatelessWidget {
     switch (role) {
       case 'director':
         return 'Директор';
-      case 'admin':
-        return 'Администратор';
-      case 'trainer':
-        return 'Тренер';
       case 'manager':
         return 'Менеджер';
-      case 'tech_staff':
-        return 'Техничка';
-      case 'student':
-        return 'Ученик';
-      case 'parent':
-        return 'Родитель';
+      case 'trainer':
+        return 'Тренер';
+      case 'client':
+        return 'Клиент';
       default:
         return role;
     }

@@ -20,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -29,33 +29,50 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 40),
               Image.asset('assets/images/logo.png', width: 200, height: 200),
-              const SizedBox(height: 40),
-              const Text(
-                'Вход в систему',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.black,
+              const SizedBox(height: 24),
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Вход в систему',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      CustomTextField(
+                        controller: _phoneController,
+                        label: 'Номер телефона',
+                        icon: Icons.phone,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _passwordController,
+                        label: 'Пароль',
+                        icon: Icons.lock,
+                        isPassword: true,
+                      ),
+                      const SizedBox(height: 24),
+                      if (_isLoading)
+                        const CircularProgressIndicator(color: AppColors.primary)
+                      else
+                        CustomButton(text: 'Войти', onPressed: _login),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => Navigator.pushNamed(context, '/register'),
+                        child: const Text('Нет аккаунта? Зарегистрироваться'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 40),
-              CustomTextField(
-                controller: _phoneController,
-                label: 'Номер телефона',
-                icon: Icons.phone,
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                controller: _passwordController,
-                label: 'Пароль',
-                icon: Icons.lock,
-                isPassword: true,
-              ),
-              const SizedBox(height: 30),
-              if (_isLoading)
-                const CircularProgressIndicator(color: AppColors.primary)
-              else
-                CustomButton(text: 'Войти', onPressed: _login),
             ],
           ),
         ),

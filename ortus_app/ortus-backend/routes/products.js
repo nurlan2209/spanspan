@@ -6,30 +6,28 @@ const {
   createProduct,
   updateProduct,
   deleteProduct,
-  updateStock,
 } = require("../controllers/productController");
 const { protect } = require("../middlewares/authMiddleware");
-const router = express.Router();
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const cloudinary = require("../config/cloudinary");
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "ortus-products",
-    allowed_formats: ["jpg", "png", "jpeg", "webp"],
+const router = express.Router();
+
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: { files: 6 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only jpeg/png images are allowed"));
+    }
   },
 });
 
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
-
 router.get("/", getAllProducts);
-router.post("/", protect, upload.array("images", 5), createProduct);
-
-router.patch("/:id/stock", protect, updateStock);
-
 router.get("/:id", getProductById);
-router.put("/:id", protect, updateProduct);
+router.post("/", protect, upload.array("images", 6), createProduct);
+router.put("/:id", protect, upload.array("images", 6), updateProduct);
 router.delete("/:id", protect, deleteProduct);
 
 module.exports = router;

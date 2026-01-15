@@ -1,5 +1,4 @@
 const User = require("../models/User");
-const JoinRequest = require("../models/JoinRequest");
 const generateToken = require("../utils/generateToken");
 
 const register = async (req, res) => {
@@ -9,90 +8,37 @@ const register = async (req, res) => {
   try {
     const {
       phoneNumber,
-      iin,
       fullName,
-      dateOfBirth,
-      userType,
-      groupId,
       password,
-      parentId,
     } = req.body;
 
     // Проверка на наличие обязательных полей
-    if (
-      !phoneNumber ||
-      !iin ||
-      !fullName ||
-      !dateOfBirth ||
-      !userType ||
-      !password
-    ) {
+    if (!phoneNumber || !fullName || !password) {
       console.log("Ошибка: Отсутствуют обязательные поля.");
       return res
         .status(400)
         .json({ message: "Пожалуйста, заполните все обязательные поля." });
     }
 
-    const roles = Array.isArray(userType) ? userType : [userType];
-
-    if (
-      roles.some((role) =>
-        ["trainer", "admin", "director", "manager", "tech_staff"].includes(role)
-      )
-    ) {
-      return res.status(403).json({
-        message:
-          "Регистрация сотрудников запрещена. Обратитесь к директору.",
-      });
-    }
-
-    const userExists = await User.findOne({ $or: [{ phoneNumber }, { iin }] });
+    const userExists = await User.findOne({ phoneNumber });
     if (userExists) {
-      console.log(
-        "Ошибка: Пользователь с таким phoneNumber или IIN уже существует."
-      );
+      console.log("Ошибка: Пользователь с таким phoneNumber уже существует.");
       return res.status(400).json({
-        message:
-          "Пользователь с таким номером телефона или ИИН уже существует.",
+        message: "Пользователь с таким номером телефона уже существует.",
       });
     }
 
-    const isStudent = roles.includes("student");
     const user = await User.create({
       phoneNumber,
-      iin,
       fullName,
-      dateOfBirth,
-      userType: roles,
-      status: isStudent ? (groupId ? "active" : "pending") : "active",
       password,
-      parentId: parentId || null,
-      parents: parentId ? [parentId] : undefined,
+      role: "client",
     });
-
-    if (parentId) {
-      await User.findByIdAndUpdate(parentId, {
-        $push: { children: user._id },
-      });
-    }
-
-    if (roles.includes("student") && groupId) {
-      await JoinRequest.create({
-        studentId: user._id,
-        groupId,
-        status: "pending",
-      });
-    }
 
     const token = generateToken(user._id);
 
     // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Преобразуем Mongoose документ в plain object
     const userObject = user.toObject();
-
-    // ✅ Явно преобразуем userType в обычный массив
-    userObject.userType = Array.isArray(userObject.userType)
-      ? [...userObject.userType]
-      : [userObject.userType];
 
     // ✅ Удаляем пароль из ответа для безопасности
     delete userObject.password;
@@ -112,22 +58,16 @@ const login = async (req, res) => {
   try {
     const { phoneNumber, password } = req.body;
 
-    const user = await User.findOne({ phoneNumber })
-      .populate("groupId")
-      .populate("children", "fullName phoneNumber groupId")
-      .populate("parentId", "fullName phoneNumber")
-      .populate("parents", "fullName phoneNumber");
+    const user = await User.findOne({ phoneNumber });
 
     if (user && (await user.matchPassword(password))) {
+      if (user.status === "inactive") {
+        return res.status(403).json({ message: "Аккаунт деактивирован" });
+      }
       const token = generateToken(user._id);
 
       // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: То же самое для логина
       const userObject = user.toObject();
-
-      // ✅ Явно преобразуем userType в обычный массив
-      userObject.userType = Array.isArray(userObject.userType)
-        ? [...userObject.userType]
-        : [userObject.userType];
 
       // ✅ Удаляем пароль из ответа
       delete userObject.password;

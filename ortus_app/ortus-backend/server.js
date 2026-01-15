@@ -5,21 +5,11 @@ const bodyParser = require("body-parser");
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/auth");
-const groupRoutes = require("./routes/groups");
 const userRoutes = require("./routes/users");
-const scheduleRoutes = require("./routes/schedules");
 const productRoutes = require("./routes/products");
 const cartRoutes = require("./routes/cart");
 const orderRoutes = require("./routes/orders");
-const paymentRoutes = require("./routes/payments");
-const attendanceRoutes = require("./routes/attendance");
-const newsRoutes = require("./routes/news");
-const analyticsRoutes = require("./routes/analytics"); // НОВОЕ
-const photoReportRoutes = require("./routes/photoReports");
-const cleaningReportRoutes = require("./routes/cleaningReports");
-const exportRoutes = require("./routes/export");
-const trainingSessionRoutes = require("./routes/trainingSessions");
-const deliveryRoutes = require("./routes/deliveryRequests");
+const reportRoutes = require("./routes/reports");
 
 const app = express();
 
@@ -37,30 +27,17 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const path = require("path");
-
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
 });
 
 app.use("/api/auth", authRoutes);
-app.use("/api/groups", groupRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/schedules", scheduleRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/attendance", attendanceRoutes);
-app.use("/api/news", newsRoutes);
-app.use("/api/analytics", analyticsRoutes); 
-app.use("/api/photo-reports", photoReportRoutes);
-app.use("/api/cleaning-reports", cleaningReportRoutes);
-app.use("/api/export", exportRoutes);
-app.use("/api/training-sessions", trainingSessionRoutes);
-app.use("/api/delivery-requests", deliveryRoutes);
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/reports", reportRoutes);
 
 app.get("/", (req, res) => {
   res.send("ORTUS API Running");

@@ -7,8 +7,10 @@ import 'auth_service.dart';
 class CartService {
   Future<CartModel?> getCart() async {
     final token = await AuthService().getToken();
+    if (token == null) return null;
+
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/cart'),
+      Uri.parse(ApiConfig.cartUrl),
       headers: {'Authorization': 'Bearer $token'},
     );
 
@@ -18,32 +20,16 @@ class CartService {
     return null;
   }
 
-  Future<bool> addToCart(String productId, String size, int quantity) async {
-    final token = await AuthService().getToken();
-    final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/cart/add'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({
-        'productId': productId,
-        'size': size,
-        'quantity': quantity,
-      }),
-    );
-
-    return response.statusCode == 200;
-  }
-
-  Future<bool> updateCartItem(
+  Future<CartModel?> addToCart(
     String productId,
     String size,
     int quantity,
   ) async {
     final token = await AuthService().getToken();
-    final response = await http.put(
-      Uri.parse('${ApiConfig.baseUrl}/cart/update'),
+    if (token == null) return null;
+
+    final response = await http.post(
+      Uri.parse('${ApiConfig.cartUrl}/add'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -55,13 +41,45 @@ class CartService {
       }),
     );
 
-    return response.statusCode == 200;
+    if (response.statusCode == 200) {
+      return CartModel.fromJson(json.decode(response.body));
+    }
+    return null;
   }
 
-  Future<bool> removeFromCart(String productId, String size) async {
+  Future<CartModel?> updateCartItem(
+    String productId,
+    String size,
+    int quantity,
+  ) async {
     final token = await AuthService().getToken();
+    if (token == null) return null;
+
+    final response = await http.put(
+      Uri.parse('${ApiConfig.cartUrl}/update'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'productId': productId,
+        'size': size,
+        'quantity': quantity,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return CartModel.fromJson(json.decode(response.body));
+    }
+    return null;
+  }
+
+  Future<CartModel?> removeFromCart(String productId, String size) async {
+    final token = await AuthService().getToken();
+    if (token == null) return null;
+
     final response = await http.delete(
-      Uri.parse('${ApiConfig.baseUrl}/cart/remove'),
+      Uri.parse('${ApiConfig.cartUrl}/remove'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -69,13 +87,18 @@ class CartService {
       body: json.encode({'productId': productId, 'size': size}),
     );
 
-    return response.statusCode == 200;
+    if (response.statusCode == 200) {
+      return CartModel.fromJson(json.decode(response.body));
+    }
+    return null;
   }
 
   Future<bool> clearCart() async {
     final token = await AuthService().getToken();
+    if (token == null) return false;
+
     final response = await http.delete(
-      Uri.parse('${ApiConfig.baseUrl}/cart/clear'),
+      Uri.parse('${ApiConfig.cartUrl}/clear'),
       headers: {'Authorization': 'Bearer $token'},
     );
 

@@ -1,14 +1,22 @@
 const Product = require("../models/Product");
+const { uploadBuffer } = require("../utils/cloudinaryUpload");
 
-const isAdmin = (user) => user.userType.includes("admin");
+const parseSizes = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+};
 
-// Получить все активные товары (для всех)
 const getAllProducts = async (req, res) => {
   try {
     const { category } = req.query;
-    const filter = { isActive: true };
+    const filter = {};
     if (category) filter.category = category;
-
     const products = await Product.find(filter).sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
@@ -30,49 +38,77 @@ const getProductById = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
-    if (!isAdmin(req.user)) {
-      return res
-        .status(403)
-        .json({ message: "Only admins can create products" });
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
     const { name, description, category, price } = req.body;
+    const sizes = parseSizes(req.body.sizes);
 
-    const images = req.files ? req.files.map((file) => file.path) : [];
+    if (!name || !price) {
+      return res
+        .status(400)
+        .json({ message: "Название и цена обязательны" });
+    }
+
+    const files = req.files || [];
+    const images = [];
+    for (const file of files) {
+      const uploaded = await uploadBuffer(file.buffer, {
+        folder: "ortus/products",
+        resource_type: "image",
+      });
+      images.push(uploaded.secure_url);
+    }
 
     const product = await Product.create({
       name,
       description,
       category,
-      price: parseFloat(price),
+      price: Number(price),
+      sizes,
       images,
-      sizes: [],
     });
 
     res.status(201).json(product);
   } catch (error) {
-    console.error("❌ Create product error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
 const updateProduct = async (req, res) => {
   try {
-    if (!isAdmin(req.user)) {
-      return res
-        .status(403)
-        .json({ message: "Only admins can update products" });
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-
+    const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    const { name, description, category, price } = req.body;
+    const sizes = parseSizes(req.body.sizes);
+
+    if (name) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (category) product.category = category;
+    if (price !== undefined) product.price = Number(price);
+    if (req.body.sizes !== undefined) product.sizes = sizes;
+
+    if (req.files && req.files.length) {
+      const images = [];
+      for (const file of req.files) {
+        const uploaded = await uploadBuffer(file.buffer, {
+          folder: "ortus/products",
+          resource_type: "image",
+        });
+        images.push(uploaded.secure_url);
+      }
+      product.images = images;
+    }
+
+    await product.save();
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -81,74 +117,18 @@ const updateProduct = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
   try {
-    if (!isAdmin(req.user)) {
-      return res
-        .status(403)
-        .json({ message: "Only admins can delete products" });
-    }
-
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    res.json({ message: "Product deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-const updateStock = async (req, res) => {
-  try {
-    console.log("📦 updateStock вызван");
-    console.log("Product ID:", req.params.id);
-    console.log("Body:", req.body);
-    console.log("User:", req.user.userType);
-
-    if (!isAdmin(req.user)) {
-      console.log("❌ Access denied");
-      return res.status(403).json({ message: "Only admins can update stock" });
-    }
-
-    const { size, stock } = req.body;
-
-    if (!size || stock === undefined) {
-      console.log("❌ Missing size or stock");
-      return res.status(400).json({ message: "Size and stock are required" });
+    if (req.user.role !== "manager") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
     const product = await Product.findById(req.params.id);
-
     if (!product) {
-      console.log("❌ Product not found");
       return res.status(404).json({ message: "Product not found" });
     }
 
-    console.log("✅ Product found:", product.name);
-    console.log("Current sizes:", product.sizes);
-
-    const sizeIndex = product.sizes.findIndex((s) => s.size === size);
-
-    if (sizeIndex === -1) {
-      console.log("➕ Adding new size:", size);
-      product.sizes.push({ size, stock });
-    } else {
-      console.log("✏️ Updating existing size:", size);
-      product.sizes[sizeIndex].stock = stock;
-    }
-
-    await product.save();
-    console.log("✅ Product saved");
-    console.log("New sizes:", product.sizes);
-
-    res.json(product);
+    await product.deleteOne();
+    res.json({ message: "Product deleted" });
   } catch (error) {
-    console.error("❌ Update stock error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -159,5 +139,4 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
-  updateStock,
 };

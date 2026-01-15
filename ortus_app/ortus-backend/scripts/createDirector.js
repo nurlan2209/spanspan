@@ -31,31 +31,24 @@ const run = async () => {
       "Телефон (+77001234567)",
       (v) => v.length >= 10
     );
-    const iin = await askRequired("ИИН (12 цифр)", (v) => v.length === 12);
     const fullName = await askRequired("ФИО", (v) => v.length > 3);
-    const dateOfBirthRaw = await askRequired(
-      "Дата рождения (YYYY-MM-DD)",
-      (v) => !Number.isNaN(Date.parse(v))
-    );
     const password = await askRequired(
       "Пароль (минимум 6 символов)",
       (v) => v.length >= 6
     );
 
     const existing = await User.findOne({
-      $or: [{ phoneNumber }, { iin }],
+      phoneNumber,
     });
     if (existing) {
-      console.log("❌ Пользователь с таким телефоном или ИИН уже существует");
+      console.log("❌ Пользователь с таким телефоном уже существует");
       process.exit(1);
     }
 
     const user = await User.create({
       phoneNumber,
-      iin,
       fullName,
-      dateOfBirth: new Date(dateOfBirthRaw),
-      userType: ["director"],
+      role: "director",
       status: "active",
       password,
     });

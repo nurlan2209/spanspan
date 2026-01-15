@@ -1,28 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/user_data.dart';
 import '../providers/auth_provider.dart';
-import '../screens/admin_dashboard_screen.dart';
-import '../screens/attendance_analytics_screen.dart';
-import '../screens/cleaning/cleaning_history_screen.dart';
-import '../screens/cleaning/cleaning_report_screen.dart';
-import '../screens/director/director_staff_screen.dart';
-import '../screens/director/director_students_screen.dart';
+import '../models/user_data.dart';
 import '../screens/login_screen.dart';
-import '../screens/manager/manager_groups_screen.dart';
-import '../screens/manager/pending_students_screen.dart';
-import '../screens/mark_attendance_screen.dart';
-import '../screens/news_feed_screen.dart';
-import '../screens/manage_products_screen.dart';
-import '../screens/photo_reports/photo_report_screen.dart';
-import '../screens/photo_reports/photo_reports_gallery_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/schedule_list_screen.dart';
-import '../screens/shop_screen.dart';
-import '../screens/trainer/trainer_groups_screen.dart';
-import '../screens/common/placeholder_screen.dart';
+import '../screens/client/shop_screen.dart';
+import '../screens/client/orders_screen.dart';
+import '../screens/manager/manager_orders_screen.dart';
+import '../screens/manager/manager_products_screen.dart';
+import '../screens/trainer/trainer_reports_screen.dart';
+import '../screens/director/staff_management_screen.dart';
+import '../screens/common/reports_overview_screen.dart';
 import '../utils/constants.dart';
-import '../screens/admin/orders_admin_screen.dart';
 
 class AppNavigator extends StatefulWidget {
   const AppNavigator({super.key});
@@ -51,7 +40,7 @@ class _AppNavigatorState extends State<AppNavigator> {
           return const LoginScreen();
         }
 
-        final tabs = _buildTabsForUser(user);
+        final tabs = _buildTabs(user);
         if (_currentIndex >= tabs.length) {
           _currentIndex = 0;
         }
@@ -81,101 +70,40 @@ class _AppNavigatorState extends State<AppNavigator> {
     );
   }
 
-  List<_TabItem> _buildTabsForUser(UserData user) {
-    if (user.hasRole('director')) {
+  List<_TabItem> _buildTabs(UserData user) {
+    if (user.isClient) {
       return [
-        _TabItem('Дашборд', Icons.dashboard, const AdminDashboardScreen()),
-        _TabItem('Студенты', Icons.school, const DirectorStudentsScreen()),
-        _TabItem('Сотрудники', Icons.badge, const DirectorStaffScreen()),
-        _TabItem(
-          'Фото',
-          Icons.photo_library,
-          const PhotoReportsGalleryScreen(),
-        ),
+        _TabItem('Магазин', Icons.storefront, const ShopScreen()),
+        _TabItem('Заказы', Icons.receipt_long, const ClientOrdersScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];
     }
 
-    if (user.isAdmin) {
+    if (user.isManager) {
       return [
-        _TabItem('Товары', Icons.inventory_2, const ManageProductsScreen()),
-        _TabItem('Заказы', Icons.receipt_long, const OrdersAdminScreen()),
-        _TabItem('Профиль', Icons.person, _profileScreen()),
-      ];
-    }
-
-    if (user.hasRole('manager')) {
-      return [
-        _TabItem('Новые', Icons.person_add, const PendingStudentsScreen()),
-        _TabItem('Группы', Icons.groups, const ManagerGroupsScreen()),
-        _TabItem('Новости', Icons.article, const NewsFeedScreen()),
+        _TabItem('Заказы', Icons.receipt_long, const ManagerOrdersScreen()),
+        _TabItem('Товары', Icons.inventory_2, const ManagerProductsScreen()),
+        _TabItem('Отчёты', Icons.fact_check, const ReportsOverviewScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];
     }
 
     if (user.isTrainer) {
       return [
-        _TabItem(
-          'Расписание',
-          Icons.calendar_month,
-          const ScheduleListScreen(),
-        ),
-        _TabItem('Посещаемость', Icons.fact_check, MarkAttendanceScreen()),
-        _TabItem('Группы', Icons.groups, const TrainerGroupsScreen()),
-        _TabItem('Фото', Icons.camera_alt, const PhotoReportScreen()),
+        _TabItem('Отчёты', Icons.fact_check, const TrainerReportsScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];
     }
 
-    if (user.hasRole('tech_staff')) {
+    if (user.isDirector) {
       return [
-        _TabItem(
-          'Отчёт',
-          Icons.cleaning_services,
-          const CleaningReportScreen(),
-        ),
-        _TabItem('История', Icons.history, const CleaningHistoryScreen()),
-        _TabItem(
-          'Расписание',
-          Icons.schedule,
-          const PlaceholderScreen(
-            title: 'Расписание уборок',
-            description:
-                'Скоро здесь появится расписание уборок по зонам и датам.',
-            icon: Icons.schedule,
-          ),
-        ),
+        _TabItem('Сотрудники', Icons.people_alt, const StaffManagementScreen()),
+        _TabItem('Отчёты', Icons.fact_check, const ReportsOverviewScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];
     }
 
-    if (user.hasRole('parent')) {
-      return [
-        _TabItem(
-          'Расписание',
-          Icons.calendar_today,
-          const ScheduleListScreen(),
-        ),
-        _TabItem('Новости', Icons.article, const NewsFeedScreen()),
-        _TabItem(
-          'Посещаемость',
-          Icons.fact_check,
-          const AttendanceAnalyticsScreen(),
-        ),
-        _TabItem('Профиль', Icons.person, _profileScreen()),
-      ];
-    }
-
-    // default student
     return [
-      _TabItem('Расписание', Icons.calendar_today, const ScheduleListScreen()),
-      _TabItem('Новости', Icons.article, const NewsFeedScreen()),
-      _TabItem(
-        'Посещаемость',
-        Icons.bar_chart,
-        const AttendanceAnalyticsScreen(),
-      ),
-      _TabItem('Магазин', Icons.store, ShopScreen()),
       _TabItem('Профиль', Icons.person, _profileScreen()),
     ];
   }

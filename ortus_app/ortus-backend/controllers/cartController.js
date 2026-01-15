@@ -1,135 +1,164 @@
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 
-// Получить корзину текущего пользователя
+const getOrCreateCart = async (userId) => {
+  let cart = await Cart.findOne({ userId }).populate("items.productId");
+  if (!cart) {
+    cart = await Cart.create({ userId, items: [] });
+    cart = await cart.populate("items.productId");
+  }
+  return cart;
+};
+
+const buildCartResponse = (cart) => {
+  const items = cart.items.map((item) => {
+    const product = item.productId;
+    const image = product?.images?.[0] || "";
+    const price = product?.price || 0;
+    const totalPrice = price * item.quantity;
+    return {
+      productId: product?._id,
+      name: product?.name || "",
+      image,
+      size: item.size,
+      quantity: item.quantity,
+      price,
+      totalPrice,
+    };
+  });
+  const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
+  return { items, totalAmount };
+};
+
 const getCart = async (req, res) => {
   try {
-    let cart = await Cart.findOne({ userId: req.user._id }).populate(
-      "items.productId"
-    );
-
-    if (!cart) {
-      cart = await Cart.create({ userId: req.user._id, items: [] });
+    if (req.user.role !== "client") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
-    res.json(cart);
+    const cart = await getOrCreateCart(req.user._id);
+    res.json(buildCartResponse(cart));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Добавить товар в корзину
 const addToCart = async (req, res) => {
   try {
+    if (req.user.role !== "client") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
     const { productId, size, quantity } = req.body;
+    const qty = Math.max(Number(quantity) || 1, 1);
 
     const product = await Product.findById(productId);
-    if (!product || !product.isActive) {
+    if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    const sizeData = product.sizes.find((s) => s.size === size);
-    if (!sizeData || sizeData.stock < quantity) {
-      return res.status(400).json({ message: "Insufficient stock" });
+    const sizeEntry = product.sizes.find((s) => s.label === size);
+    if (!sizeEntry) {
+      return res.status(400).json({ message: "Invalid size" });
     }
 
-    let cart = await Cart.findOne({ userId: req.user._id });
-    if (!cart) {
-      cart = await Cart.create({ userId: req.user._id, items: [] });
-    }
-
-    const existingItemIndex = cart.items.findIndex(
-      (item) => item.productId.toString() === productId && item.size === size
+    const cart = await getOrCreateCart(req.user._id);
+    const existing = cart.items.find(
+      (item) =>
+        item.productId._id.toString() === productId && item.size === size
     );
 
-    if (existingItemIndex > -1) {
-      cart.items[existingItemIndex].quantity += quantity;
+    const maxAllowed = sizeEntry.stock;
+    if (existing) {
+      existing.quantity = Math.min(existing.quantity + qty, maxAllowed);
     } else {
-      cart.items.push({ productId, size, quantity });
+      cart.items.push({
+        productId,
+        size,
+        quantity: Math.min(qty, maxAllowed),
+      });
     }
 
     await cart.save();
     await cart.populate("items.productId");
-
-    res.json(cart);
+    res.json(buildCartResponse(cart));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Обновить количество товара в корзине
 const updateCartItem = async (req, res) => {
   try {
+    if (req.user.role !== "client") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
     const { productId, size, quantity } = req.body;
+    const qty = Number(quantity) || 0;
 
-    const cart = await Cart.findOne({ userId: req.user._id });
-    if (!cart) {
-      return res.status(404).json({ message: "Cart not found" });
-    }
-
+    const cart = await getOrCreateCart(req.user._id);
     const itemIndex = cart.items.findIndex(
-      (item) => item.productId.toString() === productId && item.size === size
+      (item) =>
+        item.productId._id.toString() === productId && item.size === size
     );
-
     if (itemIndex === -1) {
-      return res.status(404).json({ message: "Item not found in cart" });
+      return res.status(404).json({ message: "Item not found" });
     }
 
-    if (quantity <= 0) {
+    if (qty <= 0) {
       cart.items.splice(itemIndex, 1);
     } else {
       const product = await Product.findById(productId);
-      const sizeData = product.sizes.find((s) => s.size === size);
-      if (sizeData.stock < quantity) {
-        return res.status(400).json({ message: "Insufficient stock" });
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
       }
-      cart.items[itemIndex].quantity = quantity;
+      const sizeEntry = product.sizes.find((s) => s.label === size);
+      if (!sizeEntry) {
+        return res.status(400).json({ message: "Invalid size" });
+      }
+      cart.items[itemIndex].quantity = Math.min(qty, sizeEntry.stock);
     }
 
     await cart.save();
     await cart.populate("items.productId");
-
-    res.json(cart);
+    res.json(buildCartResponse(cart));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Удалить товар из корзины
-const removeFromCart = async (req, res) => {
+const removeCartItem = async (req, res) => {
   try {
-    const { productId, size } = req.body;
-
-    const cart = await Cart.findOne({ userId: req.user._id });
-    if (!cart) {
-      return res.status(404).json({ message: "Cart not found" });
+    if (req.user.role !== "client") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
+    const { productId, size } = req.body;
+    const cart = await getOrCreateCart(req.user._id);
+
     cart.items = cart.items.filter(
-      (item) => !(item.productId.toString() === productId && item.size === size)
+      (item) =>
+        item.productId._id.toString() !== productId || item.size !== size
     );
 
     await cart.save();
     await cart.populate("items.productId");
-
-    res.json(cart);
+    res.json(buildCartResponse(cart));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Очистить корзину
 const clearCart = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.user._id });
-    if (!cart) {
-      return res.status(404).json({ message: "Cart not found" });
+    if (req.user.role !== "client") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
+    const cart = await getOrCreateCart(req.user._id);
     cart.items = [];
     await cart.save();
-
-    res.json(cart);
+    res.json({ items: [], totalAmount: 0 });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -139,6 +168,6 @@ module.exports = {
   getCart,
   addToCart,
   updateCartItem,
-  removeFromCart,
+  removeCartItem,
   clearCart,
 };

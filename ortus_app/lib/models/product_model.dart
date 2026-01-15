@@ -1,16 +1,20 @@
 class ProductSize {
-  final String size;
+  final String label;
   final int stock;
 
-  ProductSize({required this.size, required this.stock});
+  const ProductSize({required this.label, required this.stock});
 
   factory ProductSize.fromJson(Map<String, dynamic> json) {
-    return ProductSize(size: json['size'], stock: json['stock']);
+    return ProductSize(
+      label: json['label']?.toString() ?? '',
+      stock: (json['stock'] as num?)?.toInt() ?? 0,
+    );
   }
 
-  Map<String, dynamic> toJson() {
-    return {'size': size, 'stock': stock};
-  }
+  Map<String, dynamic> toJson() => {
+        'label': label,
+        'stock': stock,
+      };
 }
 
 class ProductModel {
@@ -21,7 +25,6 @@ class ProductModel {
   final double price;
   final List<String> images;
   final List<ProductSize> sizes;
-  final bool isActive;
 
   ProductModel({
     required this.id,
@@ -31,27 +34,20 @@ class ProductModel {
     required this.price,
     required this.images,
     required this.sizes,
-    required this.isActive,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    final sizes = (json['sizes'] as List? ?? [])
+        .map((e) => ProductSize.fromJson(e as Map<String, dynamic>))
+        .toList();
     return ProductModel(
-      id: json['_id'],
-      name: json['name'],
-      description: json['description'],
-      category: json['category'],
-      price: json['price'].toDouble(),
-      images: List<String>.from(json['images'] ?? []),
-      sizes: (json['sizes'] as List)
-          .map((s) => ProductSize.fromJson(s))
-          .toList(),
-      isActive: json['isActive'] ?? true,
+      id: json['_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      category: json['category']?.toString() ?? 'other',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+      images: (json['images'] as List? ?? []).map((e) => e.toString()).toList(),
+      sizes: sizes,
     );
   }
-
-  int getTotalStock() {
-    return sizes.fold(0, (sum, size) => sum + size.stock);
-  }
-
-  bool get inStock => getTotalStock() > 0;
 }

@@ -1,32 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'providers/auth_provider.dart'; // ❌ УДАЛИТЕ ЭТУ СТРОКУ
-// import 'providers/auth_provider_v2.dart'; // ✅ ОСТАВЬТЕ ТОЛЬКО ЭТУ
+import 'providers/auth_provider.dart';
 import 'screens/splash_screen.dart';
-import 'screens/manage_products_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/create_group_screen.dart';
-import 'screens/group_requests_screen.dart';
-import 'screens/create_schedule_screen.dart';
+import 'screens/register_screen.dart';
 import 'utils/constants.dart';
-import 'screens/mark_attendance_screen.dart';
-import 'screens/news_feed_screen.dart';
-// import 'screens/news_detail_screen.dart';
-// import 'screens/create_news_screen.dart';
-import 'screens/admin_dashboard_screen.dart';
-import 'screens/attendance_analytics_admin_screen.dart';
-import 'screens/groups_comparison_screen.dart';
-import 'screens/create_user_screen.dart';
-import 'screens/manager/pending_students_screen.dart';
 import 'widgets/app_navigator.dart';
-import 'screens/photo_reports/photo_report_screen.dart';
-import 'screens/photo_reports/photo_reports_gallery_screen.dart';
-import 'screens/cleaning/cleaning_report_screen.dart';
-import 'screens/cleaning/cleaning_history_screen.dart';
-import 'screens/my_orders_screen.dart';
-import 'screens/manager/create_student_screen.dart';
 
 void main() {
   runApp(
@@ -57,9 +39,22 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: ThemeData(
+        textTheme: GoogleFonts.manropeTextTheme(),
         primaryColor: AppColors.primary,
-        scaffoldBackgroundColor: AppColors.white,
+        scaffoldBackgroundColor: AppColors.surface,
         dialogBackgroundColor: AppColors.white,
+        cardTheme: CardThemeData(
+          color: AppColors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        dividerColor: AppColors.border,
+        snackBarTheme: const SnackBarThemeData(
+          backgroundColor: AppColors.black,
+          contentTextStyle: TextStyle(color: AppColors.white),
+        ),
         datePickerTheme: const DatePickerThemeData(
           backgroundColor: AppColors.white,
           headerBackgroundColor: AppColors.white,
@@ -69,46 +64,63 @@ class MyApp extends StatelessWidget {
           primary: AppColors.primary,
           onSurface: AppColors.black,
         ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.black,
+          foregroundColor: AppColors.white,
+          elevation: 0,
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: AppColors.white,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.grey,
+          showUnselectedLabels: true,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          ),
+        ),
       ),
       initialRoute: '/',
       debugShowCheckedModeBanner: false,
       routes: {
         '/': (context) => SplashScreen(),
         '/login': (context) => LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
         '/home': (context) => const AppNavigator(),
         '/app': (context) => const AppNavigator(),
         '/profile': (context) => ProfileScreen(),
-        '/create-group': (context) => CreateGroupScreen(),
-        '/group-requests': (context) => GroupRequestsScreen(),
-        '/create-schedule': (context) => CreateScheduleScreen(),
-        '/news': (context) => const NewsFeedScreen(),
-        '/mark-attendance': (context) => MarkAttendanceScreen(),
-        '/admin-dashboard': (context) => const AdminDashboardScreen(),
-        '/attendance-analytics-admin': (context) =>
-            const AttendanceAnalyticsAdminScreen(),
-        '/groups-comparison': (context) => const GroupComparisonScreen(),
-        '/manage-products': (context) => const ManageProductsScreen(),
-        '/create-user': (context) => const CreateUserScreen(),
-        '/pending-students': (context) => const PendingStudentsScreen(),
-        '/create-student': (context) => const CreateStudentScreen(),
-        '/photo-report': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments;
-          String? initialType;
-          String? initialScheduleId;
-          if (args is Map) {
-            initialType = args['type']?.toString();
-            initialScheduleId = args['scheduleId']?.toString();
-          }
-          return PhotoReportScreen(
-            initialType: initialType,
-            initialScheduleId: initialScheduleId,
-          );
-        },
-        '/photo-reports-gallery': (context) =>
-            const PhotoReportsGalleryScreen(),
-        '/cleaning-report': (context) => const CleaningReportScreen(),
-        '/cleaning-history': (context) => const CleaningHistoryScreen(),
-        '/my-orders': (context) => const MyOrdersScreen(),
       },
     );
   }

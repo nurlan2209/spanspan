@@ -1,43 +1,37 @@
 const mongoose = require("mongoose");
 
-const orderItemSchema = new mongoose.Schema({
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: true,
+const orderItemSchema = new mongoose.Schema(
+  {
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+    name: { type: String, required: true },
+    image: { type: String, default: "" },
+    size: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    price: { type: Number, required: true },
   },
-  name: { type: String, required: true },
-  price: { type: Number, required: true },
-  size: { type: String, required: true },
-  quantity: { type: Number, required: true, min: 1 },
-  image: { type: String },
-});
+  { _id: false }
+);
 
-const orderSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
+const orderSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    clientName: { type: String, required: true },
+    clientPhone: { type: String, required: true },
+    items: { type: [orderItemSchema], default: [] },
+    totalAmount: { type: Number, default: 0 },
+    status: {
+      type: String,
+      enum: ["new", "contacted", "paid", "delivering", "completed", "canceled"],
+      default: "new",
+    },
+    clientComment: { type: String, default: "" },
+    managerNote: { type: String, default: "" },
   },
-  items: [orderItemSchema],
-  totalAmount: { type: Number, required: true },
-  status: {
-    type: String,
-    enum: ["new", "preparing", "ready", "issued", "cancelled"],
-    default: "new",
-  },
-  paymentMethod: {
-    type: String,
-    enum: ["card", "kaspi", "cash", "manual"],
-    default: "manual",
-  },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-});
-
-orderSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Order", orderSchema);

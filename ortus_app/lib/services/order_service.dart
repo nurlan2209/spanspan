@@ -2,19 +2,20 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/order_model.dart';
-import '../models/delivery_request_model.dart';
 import 'auth_service.dart';
 
 class OrderService {
-  Future<OrderModel?> createOrder({String? paymentMethod}) async {
+  Future<OrderModel?> createOrder({String? comment}) async {
     final token = await AuthService().getToken();
+    if (token == null) return null;
+
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/orders'),
+      Uri.parse(ApiConfig.ordersUrl),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: json.encode({'paymentMethod': paymentMethod ?? 'manual'}),
+      body: json.encode({'comment': comment ?? ''}),
     );
 
     if (response.statusCode == 201) {
@@ -25,99 +26,61 @@ class OrderService {
 
   Future<List<OrderModel>> getMyOrders() async {
     final token = await AuthService().getToken();
+    if (token == null) return [];
+
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/orders/my-orders'),
+      Uri.parse('${ApiConfig.ordersUrl}/my'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
-      List data = json.decode(response.body);
-      return data.map((json) => OrderModel.fromJson(json)).toList();
+      final data = json.decode(response.body) as List;
+      return data.map((e) => OrderModel.fromJson(e)).toList();
     }
     return [];
   }
 
   Future<List<OrderModel>> getAllOrders({String? status}) async {
     final token = await AuthService().getToken();
-    final uri = status != null
-        ? Uri.parse('${ApiConfig.baseUrl}/orders/all?status=$status')
-        : Uri.parse('${ApiConfig.baseUrl}/orders/all');
+    if (token == null) return [];
+
+    String url = ApiConfig.ordersUrl;
+    if (status != null && status.isNotEmpty) {
+      url += '?status=$status';
+    }
 
     final response = await http.get(
-      uri,
+      Uri.parse(url),
       headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
-      List data = json.decode(response.body);
-      return data.map((json) => OrderModel.fromJson(json)).toList();
+      final data = json.decode(response.body) as List;
+      return data.map((e) => OrderModel.fromJson(e)).toList();
     }
     return [];
   }
 
-  Future<bool> updateOrderStatus(String orderId, String status) async {
+  Future<OrderModel?> updateOrderStatus({
+    required String orderId,
+    required String status,
+    String? managerNote,
+  }) async {
     final token = await AuthService().getToken();
+    if (token == null) return null;
+
     final response = await http.patch(
-      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/status'),
+      Uri.parse('${ApiConfig.ordersUrl}/$orderId/status'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: json.encode({'status': status}),
-    );
-
-    return response.statusCode == 200;
-  }
-
-  Future<bool> cancelOrder(String orderId) async {
-    final token = await AuthService().getToken();
-    final response = await http.patch(
-      Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/cancel'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    return response.statusCode == 200;
-  }
-
-  Future<bool> createDeliveryRequest(String orderId) async {
-    final token = await AuthService().getToken();
-    final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/delivery-requests'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({'orderId': orderId}),
-    );
-    return response.statusCode == 201;
-  }
-
-  Future<List<DeliveryRequestModel>> getDeliveryRequests() async {
-    final token = await AuthService().getToken();
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/delivery-requests'),
-      headers: {'Authorization': 'Bearer $token'},
+      body: json.encode({'status': status, 'managerNote': managerNote}),
     );
 
     if (response.statusCode == 200) {
-      final List data = json.decode(response.body);
-      return data
-          .map((json) => DeliveryRequestModel.fromJson(json))
-          .toList();
+      return OrderModel.fromJson(json.decode(response.body));
     }
-    return [];
-  }
-
-  Future<bool> updateDeliveryStatus(String id, String status) async {
-    final token = await AuthService().getToken();
-    final response = await http.patch(
-      Uri.parse('${ApiConfig.baseUrl}/delivery-requests/$id/status'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({'status': status}),
-    );
-    return response.statusCode == 200;
+    return null;
   }
 }
