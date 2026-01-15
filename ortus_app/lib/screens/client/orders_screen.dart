@@ -31,6 +31,7 @@ class _ClientOrdersScreenState extends State<ClientOrdersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Мои заказы'),
+        automaticallyImplyLeading: false,
       ),
       body: FutureBuilder<List<OrderModel>>(
         future: _ordersFuture,

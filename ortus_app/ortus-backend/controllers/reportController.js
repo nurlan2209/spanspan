@@ -1,5 +1,6 @@
 const Report = require("../models/Report");
 const { uploadBuffer } = require("../utils/cloudinaryUpload");
+const { slots, canSubmitAt, isLateAt } = require("../utils/reportTiming");
 
 const allowedMime = new Set([
   "image/jpeg",
@@ -7,36 +8,6 @@ const allowedMime = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
-
-const slots = [
-  "08:00-09:30",
-  "10:00-11:30",
-  "16:00-17:00",
-  "18:00-20:00",
-  "20:00-22:00",
-];
-
-const getSlotStart = (slot) => {
-  const [start] = slot.split("-");
-  const [hour, minute] = start.split(":").map((v) => parseInt(v, 10));
-  return { hour, minute };
-};
-
-const getWindowTimes = (trainingDate, slot) => {
-  const { hour, minute } = getSlotStart(slot);
-  const startTime = new Date(trainingDate);
-  startTime.setHours(hour, minute, 0, 0);
-
-  const windowStart = new Date(startTime.getTime() - 60 * 60 * 1000);
-  const windowEnd = new Date(startTime.getTime() - 30 * 60 * 1000);
-
-  return { startTime, windowStart, windowEnd };
-};
-
-const computeIsLate = (trainingDate, slot, now = new Date()) => {
-  const { windowEnd } = getWindowTimes(trainingDate, slot);
-  return now > windowEnd;
-};
 
 const createReport = async (req, res) => {
   try {
@@ -70,8 +41,7 @@ const createReport = async (req, res) => {
     }
 
     const now = new Date();
-    const { windowStart } = getWindowTimes(dateValue, slot);
-    if (now < windowStart) {
+    if (!canSubmitAt(dateValue, slot, now)) {
       return res.status(400).json({
         message: "Отправка доступна за 60 минут до тренировки",
       });
@@ -104,7 +74,7 @@ const createReport = async (req, res) => {
       slot,
       comment: comment || "",
       attachments,
-      isLate: computeIsLate(dateValue, slot, now),
+      isLate: isLateAt(dateValue, slot, now),
     });
 
     res.status(201).json(report);

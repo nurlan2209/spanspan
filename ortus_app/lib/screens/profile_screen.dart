@@ -47,13 +47,16 @@ class ProfileScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    CustomButton(
-                      text: 'Выйти',
-                      onPressed: () {
-                        authProvider.logout();
-                        Navigator.pushReplacementNamed(context, '/login');
-                      },
-                      color: AppColors.black,
+                    SizedBox(
+                      width: double.infinity,
+                      child: CustomButton(
+                        text: 'Выйти',
+                        onPressed: () {
+                          authProvider.logout();
+                          Navigator.pushReplacementNamed(context, '/login');
+                        },
+                        color: AppColors.black,
+                      ),
                     ),
                   ],
                 ),

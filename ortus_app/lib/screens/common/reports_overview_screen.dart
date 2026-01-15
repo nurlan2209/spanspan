@@ -55,6 +55,7 @@ class _ReportsOverviewScreenState extends State<ReportsOverviewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [

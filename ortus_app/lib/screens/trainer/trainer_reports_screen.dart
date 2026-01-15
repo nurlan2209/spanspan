@@ -46,8 +46,11 @@ class _TrainerReportsScreenState extends State<TrainerReportsScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Отчёты'),
-          bottom: const TabBar(
-            tabs: [
+          automaticallyImplyLeading: false,
+          bottom: TabBar(
+            labelColor: AppColors.white,
+            unselectedLabelColor: AppColors.white.withValues(alpha: 0.7),
+            tabs: const [
               Tab(text: 'Новый отчёт'),
               Tab(text: 'Мои отчёты'),
             ],

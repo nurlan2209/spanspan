@@ -45,6 +45,7 @@ class _ManagerProductsScreenState extends State<ManagerProductsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Товары'),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

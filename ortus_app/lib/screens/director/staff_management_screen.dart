@@ -40,6 +40,7 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Сотрудники'),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add_alt_1_outlined),
@@ -139,146 +140,159 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
   }
 
   Future<void> _openCreateStaff() async {
-    final nameController = TextEditingController();
-    final phoneController = TextEditingController();
-    final passwordController = TextEditingController();
-    String role = 'trainer';
-    bool isSaving = false;
-
-    await showModalBottomSheet<void>(
+    final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Новый сотрудник',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: 'ФИО'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: phoneController,
-                    decoration: const InputDecoration(labelText: 'Телефон'),
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: passwordController,
-                    decoration: const InputDecoration(labelText: 'Пароль'),
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: role,
-                    decoration: const InputDecoration(labelText: 'Роль'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'trainer',
-                        child: Text('Тренер'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'manager',
-                        child: Text('Менеджер'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setModalState(() => role = value);
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: isSaving
-                          ? null
-                          : () async {
-                              if (nameController.text.trim().isEmpty ||
-                                  phoneController.text.trim().isEmpty ||
-                                  passwordController.text.trim().isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('Заполните все поля сотрудника'),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              setModalState(() => isSaving = true);
-                              final created = await UserService().createStaff(
-                                phoneNumber: phoneController.text.trim(),
-                                fullName: nameController.text.trim(),
-                                password: passwordController.text.trim(),
-                                role: role,
-                              );
-                              setModalState(() => isSaving = false);
-
-                              if (created != null && context.mounted) {
-                                Navigator.pop(context);
-                                _load();
-                              } else if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content:
-                                        Text('Не удалось создать сотрудника'),
-                                  ),
-                                );
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: isSaving
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                color: AppColors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Создать',
-                              style: TextStyle(
-                                color: AppColors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (context) => const _CreateStaffSheet(),
     );
 
-    nameController.dispose();
-    phoneController.dispose();
-    passwordController.dispose();
+    if (created == true) {
+      _load();
+    }
+  }
+}
+
+class _CreateStaffSheet extends StatefulWidget {
+  const _CreateStaffSheet();
+
+  @override
+  State<_CreateStaffSheet> createState() => _CreateStaffSheetState();
+}
+
+class _CreateStaffSheetState extends State<_CreateStaffSheet> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  String _role = 'trainer';
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Новый сотрудник',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'ФИО'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneController,
+              decoration: const InputDecoration(labelText: 'Телефон'),
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordController,
+              decoration: const InputDecoration(labelText: 'Пароль'),
+              obscureText: true,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _role,
+              decoration: const InputDecoration(labelText: 'Роль'),
+              items: const [
+                DropdownMenuItem(
+                  value: 'trainer',
+                  child: Text('Тренер'),
+                ),
+                DropdownMenuItem(
+                  value: 'manager',
+                  child: Text('Менеджер'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _role = value);
+              },
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          color: AppColors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Создать',
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    if (_nameController.text.trim().isEmpty ||
+        _phoneController.text.trim().isEmpty ||
+        _passwordController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Заполните все поля сотрудника')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    final created = await UserService().createStaff(
+      phoneNumber: _phoneController.text.trim(),
+      fullName: _nameController.text.trim(),
+      password: _passwordController.text.trim(),
+      role: _role,
+    );
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (created != null) {
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Не удалось создать сотрудника')),
+      );
+    }
   }
 }
 
@@ -377,6 +391,7 @@ class _StaffCard extends StatelessWidget {
                           onPressed: () => Navigator.pop(context, true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.redAccent,
+                            foregroundColor: AppColors.white,
                           ),
                           child: const Text('Удалить'),
                         ),

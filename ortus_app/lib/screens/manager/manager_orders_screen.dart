@@ -40,6 +40,7 @@ class _ManagerOrdersScreenState extends State<ManagerOrdersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Заказы'),
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
