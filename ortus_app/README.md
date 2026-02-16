@@ -1,16 +1,31 @@
 # ortus_app
 
-A new Flutter project.
+## Backend (Docker, server)
 
-## Getting Started
+```bash
+cd ortus-backend
+cp .env.example .env
+# fill real secrets in .env if needed (JWT/CLOUDINARY)
+docker compose up -d --build
+docker compose ps
+```
 
-This project is a starting point for a Flutter application.
+API will be available at:
 
-A few resources to get you started if this is your first Flutter project:
+`http://<SERVER_IP>:5000/api`
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Frontend (Flutter, phone)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+`ApiConfig` supports runtime override through `--dart-define`.
+
+Run/build with server API:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://<SERVER_IP>:5000/api
+```
+
+or for release:
+
+```bash
+flutter build ios --release --dart-define=API_BASE_URL=http://<SERVER_IP>:5000/api
+```
