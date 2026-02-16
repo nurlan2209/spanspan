@@ -1,9 +1,27 @@
 services:
+  mongo:
+    image: mongo:7
+    container_name: ortus-mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build: .
     container_name: ortus-backend
+    depends_on:
+      mongo:
+        condition: service_healthy
     ports:
       - "5000:5000"
     env_file:
       - .env
     restart: unless-stopped
+
+volumes:
+  mongo_data:
