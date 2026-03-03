@@ -44,15 +44,12 @@ class UserService {
     if (role != null && role.isNotEmpty) params['role'] = role;
     if (status != null && status.isNotEmpty) params['status'] = status;
 
-    var url = '${ApiConfig.usersUrl}/staff';
-    if (params.isNotEmpty) {
-      final query =
-          params.entries.map((e) => '${e.key}=${e.value}').join('&');
-      url += '?$query';
-    }
+    final uri = Uri.parse('${ApiConfig.usersUrl}/staff').replace(
+      queryParameters: params.isEmpty ? null : params,
+    );
 
     final response = await http.get(
-      Uri.parse(url),
+      uri,
       headers: {'Authorization': 'Bearer $token'},
     );
 

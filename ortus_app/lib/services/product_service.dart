@@ -7,11 +7,12 @@ import 'auth_service.dart';
 
 class ProductService {
   Future<List<ProductModel>> getProducts({String? category}) async {
-    String url = ApiConfig.productsUrl;
-    if (category != null && category.isNotEmpty) {
-      url += '?category=$category';
-    }
-    final response = await http.get(Uri.parse(url));
+    final uri = Uri.parse(ApiConfig.productsUrl).replace(
+      queryParameters: (category != null && category.isNotEmpty)
+          ? {'category': category}
+          : null,
+    );
+    final response = await http.get(uri);
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as List;
       return data.map((e) => ProductModel.fromJson(e)).toList();

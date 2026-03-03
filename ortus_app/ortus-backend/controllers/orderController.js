@@ -2,36 +2,80 @@ const Cart = require("../models/Cart");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 
+const rollbackStock = async (appliedUpdates) => {
+  for (const entry of appliedUpdates) {
+    await Product.updateOne(
+      { _id: entry.productId, "sizes.label": entry.size },
+      { $inc: { "sizes.$.stock": entry.quantity } }
+    );
+  }
+};
+
 const createOrder = async (req, res) => {
+  let appliedUpdates = [];
+  let cartSnapshot = null;
+
   try {
     if (req.user.role !== "client") {
       return res.status(403).json({ message: "Access denied" });
     }
 
     const { comment } = req.body;
-    const cart = await Cart.findOne({ userId: req.user._id }).populate(
-      "items.productId"
+    const cart = await Cart.findOneAndUpdate(
+      { userId: req.user._id, "items.0": { $exists: true } },
+      { $set: { items: [] } },
+      { new: false, lean: true }
     );
 
-    if (!cart || cart.items.length === 0) {
+    if (!cart) {
       return res.status(400).json({ message: "Корзина пуста" });
     }
+
+    cartSnapshot = cart.items;
+
+    const productIds = [...new Set(cart.items.map((item) => String(item.productId)))];
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const productMap = new Map(products.map((product) => [String(product._id), product]));
 
     const items = [];
     let totalAmount = 0;
 
     for (const item of cart.items) {
-      const product = item.productId;
-      if (!product) continue;
+      const product = productMap.get(String(item.productId));
+      if (!product) {
+        await rollbackStock(appliedUpdates);
+        await Cart.findOneAndUpdate({ userId: req.user._id, items: [] }, { $set: { items: cart.items } });
+        return res.status(400).json({ message: "Один из товаров не найден" });
+      }
+
       const sizeEntry = product.sizes.find((s) => s.label === item.size);
-      if (!sizeEntry || sizeEntry.stock < item.quantity) {
+      if (!sizeEntry) {
+        await rollbackStock(appliedUpdates);
+        await Cart.findOneAndUpdate({ userId: req.user._id, items: [] }, { $set: { items: cart.items } });
+        return res.status(400).json({ message: `Размер недоступен: ${product.name} (${item.size})` });
+      }
+
+      const stockResult = await Product.updateOne(
+        {
+          _id: product._id,
+          sizes: { $elemMatch: { label: item.size, stock: { $gte: item.quantity } } },
+        },
+        { $inc: { "sizes.$.stock": -item.quantity } }
+      );
+
+      if (!stockResult.modifiedCount) {
+        await rollbackStock(appliedUpdates);
+        await Cart.findOneAndUpdate({ userId: req.user._id, items: [] }, { $set: { items: cart.items } });
         return res.status(400).json({
           message: `Недостаточно товара: ${product.name} (${item.size})`,
         });
       }
 
-      sizeEntry.stock -= item.quantity;
-      await product.save();
+      appliedUpdates.push({
+        productId: product._id,
+        size: item.size,
+        quantity: item.quantity,
+      });
 
       const price = product.price;
       const lineTotal = price * item.quantity;
@@ -56,11 +100,21 @@ const createOrder = async (req, res) => {
       clientComment: comment || "",
     });
 
-    cart.items = [];
-    await cart.save();
-
     res.status(201).json(order);
   } catch (error) {
+    try {
+      if (appliedUpdates.length) {
+        await rollbackStock(appliedUpdates);
+      }
+      if (cartSnapshot && cartSnapshot.length) {
+        await Cart.findOneAndUpdate(
+          { userId: req.user._id, items: [] },
+          { $set: { items: cartSnapshot } }
+        );
+      }
+    } catch (rollbackError) {
+      console.error("Order rollback failed:", rollbackError);
+    }
     res.status(500).json({ message: error.message });
   }
 };

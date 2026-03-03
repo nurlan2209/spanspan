@@ -66,15 +66,12 @@ class ReportService {
     }
     if (isLate != null) params['isLate'] = isLate.toString();
 
-    var url = ApiConfig.reportsUrl;
-    if (params.isNotEmpty) {
-      final query =
-          params.entries.map((e) => '${e.key}=${e.value}').join('&');
-      url += '?$query';
-    }
+    final uri = Uri.parse(ApiConfig.reportsUrl).replace(
+      queryParameters: params.isEmpty ? null : params,
+    );
 
     final response = await http.get(
-      Uri.parse(url),
+      uri,
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {

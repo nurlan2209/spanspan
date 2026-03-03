@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
 const connectDB = require("./config/db");
 
 const authRoutes = require("./routes/auth");
@@ -15,17 +14,28 @@ const app = express();
 
 connectDB();
 
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
+    credentials: allowedOrigins.length > 0,
   })
 );
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
@@ -41,6 +51,17 @@ app.use("/api/reports", reportRoutes);
 
 app.get("/", (req, res) => {
   res.send("ORTUS API Running");
+});
+
+app.use((err, req, res, next) => {
+  if (!err) return next();
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ message: err.message });
+  }
+  if (err.name === "MulterError") {
+    return res.status(400).json({ message: err.message });
+  }
+  return res.status(400).json({ message: err.message || "Bad request" });
 });
 
 const PORT = process.env.PORT || 5000;

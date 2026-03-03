@@ -12,9 +12,10 @@ const { protect } = require("../middlewares/authMiddleware");
 const router = express.Router();
 
 const storage = multer.memoryStorage();
+const maxImageSizeBytes = 5 * 1024 * 1024;
 const upload = multer({
   storage,
-  limits: { files: 6 },
+  limits: { files: 6, fileSize: maxImageSizeBytes },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
       cb(null, true);

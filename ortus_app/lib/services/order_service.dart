@@ -44,13 +44,13 @@ class OrderService {
     final token = await AuthService().getToken();
     if (token == null) return [];
 
-    String url = ApiConfig.ordersUrl;
-    if (status != null && status.isNotEmpty) {
-      url += '?status=$status';
-    }
+    final uri = Uri.parse(ApiConfig.ordersUrl).replace(
+      queryParameters:
+          (status != null && status.isNotEmpty) ? {'status': status} : null,
+    );
 
     final response = await http.get(
-      Uri.parse(url),
+      uri,
       headers: {'Authorization': 'Bearer $token'},
     );
 
