@@ -1,31 +1,95 @@
-const mongoose = require("mongoose");
+const pool = require("../config/db");
 const bcrypt = require("bcryptjs");
 
-const userSchema = new mongoose.Schema({
-  phoneNumber: { type: String, required: true, unique: true },
-  fullName: { type: String, required: true },
-  role: {
-    type: String,
-    enum: ["director", "manager", "trainer", "client"],
-    default: "client",
-  },
-  status: {
-    type: String,
-    enum: ["active", "inactive"],
-    default: "active",
-  },
-  password: { type: String, required: true },
-  createdAt: { type: Date, default: Date.now },
-});
-
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
-});
-
-userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+const toUser = (row, withPassword = false) => {
+  if (!row) return null;
+  const u = {
+    _id: row.id,
+    phoneNumber: row.phone_number,
+    fullName: row.full_name,
+    role: row.role,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+  if (withPassword) u.password = row.password;
+  return u;
 };
 
-module.exports = mongoose.model("User", userSchema);
+const User = {
+  async findByPhone(phoneNumber) {
+    const { rows } = await pool.query(
+      "SELECT * FROM users WHERE phone_number = $1",
+      [phoneNumber]
+    );
+    return toUser(rows[0], true);
+  },
+
+  async findById(id) {
+    const { rows } = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
+    return toUser(rows[0]);
+  },
+
+  async findMany({ role, status } = {}) {
+    const conds = [];
+    const params = [];
+    if (role) {
+      if (Array.isArray(role)) {
+        params.push(role);
+        conds.push(`role = ANY($${params.length})`);
+      } else {
+        params.push(role);
+        conds.push(`role = $${params.length}`);
+      }
+    }
+    if (status) {
+      params.push(status);
+      conds.push(`status = $${params.length}`);
+    }
+    const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+    const { rows } = await pool.query(
+      `SELECT * FROM users ${where} ORDER BY created_at DESC`,
+      params
+    );
+    return rows.map((r) => toUser(r));
+  },
+
+  async create({ phoneNumber, fullName, password, role = "client", status = "active" }) {
+    const hashed = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query(
+      `INSERT INTO users (phone_number, full_name, password, role, status)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [phoneNumber, fullName, hashed, role, status]
+    );
+    return toUser(rows[0]);
+  },
+
+  async update(id, { fullName, phoneNumber, password, status }) {
+    const sets = [];
+    const params = [];
+    if (fullName !== undefined) { params.push(fullName); sets.push(`full_name = $${params.length}`); }
+    if (phoneNumber !== undefined) { params.push(phoneNumber); sets.push(`phone_number = $${params.length}`); }
+    if (password !== undefined) {
+      const hashed = await bcrypt.hash(password, 10);
+      params.push(hashed);
+      sets.push(`password = $${params.length}`);
+    }
+    if (status !== undefined) { params.push(status); sets.push(`status = $${params.length}`); }
+    if (!sets.length) return User.findById(id);
+    params.push(id);
+    const { rows } = await pool.query(
+      `UPDATE users SET ${sets.join(", ")} WHERE id = $${params.length} RETURNING *`,
+      params
+    );
+    return toUser(rows[0]);
+  },
+
+  async deleteById(id) {
+    await pool.query("DELETE FROM users WHERE id = $1", [id]);
+  },
+
+  checkPassword(hashed, entered) {
+    return bcrypt.compare(entered, hashed);
+  },
+};
+
+module.exports = User;

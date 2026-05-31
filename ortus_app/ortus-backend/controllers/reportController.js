@@ -1,5 +1,5 @@
 const Report = require("../models/Report");
-const { uploadBuffer } = require("../utils/cloudinaryUpload");
+const { saveFile } = require("../utils/localUpload");
 const { slots, canSubmitAt, isLateAt } = require("../utils/reportTiming");
 
 const allowedMime = new Set([
@@ -11,54 +11,29 @@ const allowedMime = new Set([
 
 const createReport = async (req, res) => {
   try {
-    if (req.user.role !== "trainer") {
-      return res.status(403).json({ message: "Access denied" });
-    }
+    if (req.user.role !== "trainer") return res.status(403).json({ message: "Access denied" });
 
     const { trainingDate, slot, comment } = req.body;
-
-    if (!trainingDate || !slot) {
-      return res
-        .status(400)
-        .json({ message: "Дата и слот обязательны" });
-    }
-
-    if (!slots.includes(slot)) {
-      return res.status(400).json({ message: "Invalid slot" });
-    }
+    if (!trainingDate || !slot) return res.status(400).json({ message: "Дата и слот обязательны" });
+    if (!slots.includes(slot)) return res.status(400).json({ message: "Invalid slot" });
 
     const dateValue = new Date(trainingDate);
-    if (Number.isNaN(dateValue.getTime())) {
-      return res.status(400).json({ message: "Invalid date" });
-    }
+    if (Number.isNaN(dateValue.getTime())) return res.status(400).json({ message: "Invalid date" });
 
     const files = req.files || [];
-    if (files.length === 0) {
-      return res.status(400).json({ message: "Добавьте вложения" });
-    }
-    if (files.length > 4) {
-      return res.status(400).json({ message: "Максимум 4 вложения" });
-    }
+    if (!files.length) return res.status(400).json({ message: "Добавьте вложения" });
+    if (files.length > 4) return res.status(400).json({ message: "Максимум 4 вложения" });
 
     const now = new Date();
     if (!canSubmitAt(dateValue, slot, now)) {
-      return res.status(400).json({
-        message: "Отправка доступна за 60 минут до тренировки",
-      });
+      return res.status(400).json({ message: "Отправка доступна за 60 минут до тренировки" });
     }
 
     const attachments = [];
     for (const file of files) {
-      if (!allowedMime.has(file.mimetype)) {
-        return res.status(400).json({ message: "Unsupported file type" });
-      }
-      const resourceType = file.mimetype.startsWith("image/")
-        ? "image"
-        : "raw";
-      const uploaded = await uploadBuffer(file.buffer, {
-        folder: "ortus/reports",
-        resource_type: resourceType,
-      });
+      if (!allowedMime.has(file.mimetype)) return res.status(400).json({ message: "Unsupported file type" });
+      const resourceType = file.mimetype.startsWith("image/") ? "image" : "raw";
+      const uploaded = saveFile(file.buffer, "reports", file.originalname);
       attachments.push({
         url: uploaded.secure_url,
         publicId: uploaded.public_id,
@@ -76,7 +51,6 @@ const createReport = async (req, res) => {
       attachments,
       isLate: isLateAt(dateValue, slot, now),
     });
-
     res.status(201).json(report);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -85,13 +59,8 @@ const createReport = async (req, res) => {
 
 const getMyReports = async (req, res) => {
   try {
-    if (req.user.role !== "trainer") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const reports = await Report.find({ trainerId: req.user._id }).sort({
-      createdAt: -1,
-    });
+    if (req.user.role !== "trainer") return res.status(403).json({ message: "Access denied" });
+    const reports = await Report.findByTrainerId(req.user._id);
     res.json(reports);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -100,20 +69,11 @@ const getMyReports = async (req, res) => {
 
 const deleteReport = async (req, res) => {
   try {
-    if (req.user.role !== "trainer") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
+    if (req.user.role !== "trainer") return res.status(403).json({ message: "Access denied" });
     const report = await Report.findById(req.params.id);
-    if (!report) {
-      return res.status(404).json({ message: "Report not found" });
-    }
-
-    if (report.trainerId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    await report.deleteOne();
+    if (!report) return res.status(404).json({ message: "Report not found" });
+    if (report.trainerId !== req.user._id) return res.status(403).json({ message: "Access denied" });
+    await Report.deleteById(req.params.id);
     res.json({ message: "Report deleted" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -122,38 +82,19 @@ const deleteReport = async (req, res) => {
 
 const getReports = async (req, res) => {
   try {
-    if (!["manager", "director"].includes(req.user.role)) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
+    if (!["manager", "director"].includes(req.user.role)) return res.status(403).json({ message: "Access denied" });
     const { dateFrom, dateTo, trainerId, isLate } = req.query;
     const filter = {};
-
     if (trainerId) filter.trainerId = trainerId;
-
-    if (dateFrom || dateTo) {
-      filter.trainingDate = {};
-      if (dateFrom) filter.trainingDate.$gte = new Date(dateFrom);
-      if (dateTo) filter.trainingDate.$lte = new Date(dateTo);
-    }
-
-    if (isLate === "true" || isLate === "false") {
-      filter.isLate = isLate === "true";
-    }
-
-    const reports = await Report.find(filter)
-      .populate("trainerId", "fullName phoneNumber")
-      .sort({ trainingDate: -1, createdAt: -1 });
+    if (dateFrom) filter.dateFrom = dateFrom;
+    if (dateTo) filter.dateTo = dateTo;
+    if (isLate === "true") filter.isLate = true;
+    else if (isLate === "false") filter.isLate = false;
+    const reports = await Report.findAll(filter);
     res.json(reports);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = {
-  createReport,
-  getMyReports,
-  deleteReport,
-  getReports,
-  slots,
-};
+module.exports = { createReport, getMyReports, deleteReport, getReports, slots };

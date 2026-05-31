@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const connectDB = require("./config/db");
+const connectDB = require("./config/connectDB");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -9,6 +9,8 @@ const productRoutes = require("./routes/products");
 const cartRoutes = require("./routes/cart");
 const orderRoutes = require("./routes/orders");
 const reportRoutes = require("./routes/reports");
+
+const path = require("path");
 
 const app = express();
 
@@ -36,6 +38,7 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);

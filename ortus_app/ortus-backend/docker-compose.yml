@@ -1,12 +1,16 @@
 services:
-  mongo:
-    image: mongo:7
-    container_name: ortus-mongo
+  postgres:
+    image: postgres:16-alpine
+    container_name: ortus-postgres
     restart: unless-stopped
+    environment:
+      POSTGRES_DB: ortus
+      POSTGRES_USER: ortus
+      POSTGRES_PASSWORD: ortus_secret
     volumes:
-      - mongo_data:/data/db
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 }).ok"]
+      test: ["CMD-SHELL", "pg_isready -U ortus -d ortus"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -15,13 +19,16 @@ services:
     build: .
     container_name: ortus-backend
     depends_on:
-      mongo:
+      postgres:
         condition: service_healthy
     ports:
       - "5000:5000"
     env_file:
       - .env
+    volumes:
+      - uploads_data:/app/uploads
     restart: unless-stopped
 
 volumes:
-  mongo_data:
+  pg_data:
+  uploads_data:

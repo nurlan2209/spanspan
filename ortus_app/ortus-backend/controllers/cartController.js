@@ -1,43 +1,32 @@
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 
-const getOrCreateCart = async (userId) => {
-  let cart = await Cart.findOne({ userId }).populate("items.productId");
-  if (!cart) {
-    cart = await Cart.create({ userId, items: [] });
-    cart = await cart.populate("items.productId");
-  }
-  return cart;
-};
-
-const buildCartResponse = (cart) => {
-  const items = cart.items.map((item) => {
-    const product = item.productId;
-    const image = product?.images?.[0] || "";
-    const price = product?.price || 0;
-    const totalPrice = price * item.quantity;
+const buildCartResponse = async (rawItems) => {
+  if (!rawItems || !rawItems.length) return { items: [], totalAmount: 0 };
+  const productIds = [...new Set(rawItems.map((i) => i.productId))];
+  const products = await Product.findByIds(productIds);
+  const productMap = new Map(products.map((p) => [p._id, p]));
+  const items = rawItems.map((item) => {
+    const p = productMap.get(item.productId) || {};
+    const price = p.price || 0;
     return {
-      productId: product?._id,
-      name: product?.name || "",
-      image,
+      productId: item.productId,
+      name: p.name || "",
+      image: (p.images || [])[0] || "",
       size: item.size,
       quantity: item.quantity,
       price,
-      totalPrice,
+      totalPrice: price * item.quantity,
     };
   });
-  const totalAmount = items.reduce((sum, item) => sum + item.totalPrice, 0);
-  return { items, totalAmount };
+  return { items, totalAmount: items.reduce((s, i) => s + i.totalPrice, 0) };
 };
 
 const getCart = async (req, res) => {
   try {
-    if (req.user.role !== "client") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const cart = await getOrCreateCart(req.user._id);
-    res.json(buildCartResponse(cart));
+    if (req.user.role !== "client") return res.status(403).json({ message: "Access denied" });
+    const cart = await Cart.getOrCreate(req.user._id);
+    res.json(await buildCartResponse(cart.items));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -45,43 +34,26 @@ const getCart = async (req, res) => {
 
 const addToCart = async (req, res) => {
   try {
-    if (req.user.role !== "client") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
+    if (req.user.role !== "client") return res.status(403).json({ message: "Access denied" });
     const { productId, size, quantity } = req.body;
     const qty = Math.max(Number(quantity) || 1, 1);
 
     const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
+    if (!product) return res.status(404).json({ message: "Product not found" });
     const sizeEntry = product.sizes.find((s) => s.label === size);
-    if (!sizeEntry) {
-      return res.status(400).json({ message: "Invalid size" });
-    }
+    if (!sizeEntry) return res.status(400).json({ message: "Invalid size" });
 
-    const cart = await getOrCreateCart(req.user._id);
-    const existing = cart.items.find(
-      (item) =>
-        item.productId._id.toString() === productId && item.size === size
-    );
-
-    const maxAllowed = sizeEntry.stock;
-    if (existing) {
-      existing.quantity = Math.min(existing.quantity + qty, maxAllowed);
+    const cart = await Cart.getOrCreate(req.user._id);
+    const items = [...cart.items];
+    const idx = items.findIndex((i) => i.productId === productId && i.size === size);
+    if (idx !== -1) {
+      items[idx] = { ...items[idx], quantity: Math.min(items[idx].quantity + qty, sizeEntry.stock) };
     } else {
-      cart.items.push({
-        productId,
-        size,
-        quantity: Math.min(qty, maxAllowed),
-      });
+      items.push({ productId, size, quantity: Math.min(qty, sizeEntry.stock) });
     }
 
-    await cart.save();
-    await cart.populate("items.productId");
-    res.json(buildCartResponse(cart));
+    await Cart.setItems(req.user._id, items);
+    res.json(await buildCartResponse(items));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -89,39 +61,27 @@ const addToCart = async (req, res) => {
 
 const updateCartItem = async (req, res) => {
   try {
-    if (req.user.role !== "client") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
+    if (req.user.role !== "client") return res.status(403).json({ message: "Access denied" });
     const { productId, size, quantity } = req.body;
     const qty = Number(quantity) || 0;
 
-    const cart = await getOrCreateCart(req.user._id);
-    const itemIndex = cart.items.findIndex(
-      (item) =>
-        item.productId._id.toString() === productId && item.size === size
-    );
-    if (itemIndex === -1) {
-      return res.status(404).json({ message: "Item not found" });
-    }
+    const cart = await Cart.getOrCreate(req.user._id);
+    let items = [...cart.items];
+    const idx = items.findIndex((i) => i.productId === productId && i.size === size);
+    if (idx === -1) return res.status(404).json({ message: "Item not found" });
 
     if (qty <= 0) {
-      cart.items.splice(itemIndex, 1);
+      items.splice(idx, 1);
     } else {
       const product = await Product.findById(productId);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
+      if (!product) return res.status(404).json({ message: "Product not found" });
       const sizeEntry = product.sizes.find((s) => s.label === size);
-      if (!sizeEntry) {
-        return res.status(400).json({ message: "Invalid size" });
-      }
-      cart.items[itemIndex].quantity = Math.min(qty, sizeEntry.stock);
+      if (!sizeEntry) return res.status(400).json({ message: "Invalid size" });
+      items[idx] = { ...items[idx], quantity: Math.min(qty, sizeEntry.stock) };
     }
 
-    await cart.save();
-    await cart.populate("items.productId");
-    res.json(buildCartResponse(cart));
+    await Cart.setItems(req.user._id, items);
+    res.json(await buildCartResponse(items));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -129,21 +89,12 @@ const updateCartItem = async (req, res) => {
 
 const removeCartItem = async (req, res) => {
   try {
-    if (req.user.role !== "client") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
+    if (req.user.role !== "client") return res.status(403).json({ message: "Access denied" });
     const { productId, size } = req.body;
-    const cart = await getOrCreateCart(req.user._id);
-
-    cart.items = cart.items.filter(
-      (item) =>
-        item.productId._id.toString() !== productId || item.size !== size
-    );
-
-    await cart.save();
-    await cart.populate("items.productId");
-    res.json(buildCartResponse(cart));
+    const cart = await Cart.getOrCreate(req.user._id);
+    const items = cart.items.filter((i) => !(i.productId === productId && i.size === size));
+    await Cart.setItems(req.user._id, items);
+    res.json(await buildCartResponse(items));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -151,23 +102,12 @@ const removeCartItem = async (req, res) => {
 
 const clearCart = async (req, res) => {
   try {
-    if (req.user.role !== "client") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const cart = await getOrCreateCart(req.user._id);
-    cart.items = [];
-    await cart.save();
+    if (req.user.role !== "client") return res.status(403).json({ message: "Access denied" });
+    await Cart.setItems(req.user._id, []);
     res.json({ items: [], totalAmount: 0 });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = {
-  getCart,
-  addToCart,
-  updateCartItem,
-  removeCartItem,
-  clearCart,
-};
+module.exports = { getCart, addToCart, updateCartItem, removeCartItem, clearCart };

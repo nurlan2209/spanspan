@@ -1,133 +1,97 @@
+const pool = require("../config/db");
 const Cart = require("../models/Cart");
 const Order = require("../models/Order");
-const Product = require("../models/Product");
 
-const rollbackStock = async (appliedUpdates) => {
-  for (const entry of appliedUpdates) {
-    await Product.updateOne(
-      { _id: entry.productId, "sizes.label": entry.size },
-      { $inc: { "sizes.$.stock": entry.quantity } }
-    );
-  }
-};
+const toOrder = (row) => ({
+  _id: row.id,
+  userId: row.user_id,
+  clientName: row.client_name,
+  clientPhone: row.client_phone,
+  items: row.items || [],
+  totalAmount: Number(row.total_amount),
+  status: row.status,
+  clientComment: row.client_comment,
+  managerNote: row.manager_note,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
 
 const createOrder = async (req, res) => {
-  let appliedUpdates = [];
-  let cartSnapshot = null;
-
+  const client = await pool.connect();
   try {
-    if (req.user.role !== "client") {
-      return res.status(403).json({ message: "Access denied" });
-    }
+    if (req.user.role !== "client") return res.status(403).json({ message: "Access denied" });
 
-    const { comment } = req.body;
-    const cart = await Cart.findOneAndUpdate(
-      { userId: req.user._id, "items.0": { $exists: true } },
-      { $set: { items: [] } },
-      { new: false, lean: true }
-    );
+    await client.query("BEGIN");
 
-    if (!cart) {
+    const cartItems = await Cart.clearAndGetItems(client, req.user._id);
+    if (!cartItems) {
+      await client.query("ROLLBACK");
       return res.status(400).json({ message: "Корзина пуста" });
     }
 
-    cartSnapshot = cart.items;
-
-    const productIds = [...new Set(cart.items.map((item) => String(item.productId)))];
-    const products = await Product.find({ _id: { $in: productIds } }).lean();
-    const productMap = new Map(products.map((product) => [String(product._id), product]));
-
-    const items = [];
+    const orderItems = [];
     let totalAmount = 0;
 
-    for (const item of cart.items) {
-      const product = productMap.get(String(item.productId));
+    for (const item of cartItems) {
+      const { rows } = await client.query(
+        "SELECT * FROM products WHERE id = $1 FOR UPDATE",
+        [item.productId]
+      );
+      const product = rows[0];
       if (!product) {
-        await rollbackStock(appliedUpdates);
-        await Cart.findOneAndUpdate({ userId: req.user._id, items: [] }, { $set: { items: cart.items } });
+        await client.query("ROLLBACK");
         return res.status(400).json({ message: "Один из товаров не найден" });
       }
 
-      const sizeEntry = product.sizes.find((s) => s.label === item.size);
-      if (!sizeEntry) {
-        await rollbackStock(appliedUpdates);
-        await Cart.findOneAndUpdate({ userId: req.user._id, items: [] }, { $set: { items: cart.items } });
+      const sizes = product.sizes;
+      const sizeIdx = sizes.findIndex((s) => s.label === item.size);
+      if (sizeIdx === -1) {
+        await client.query("ROLLBACK");
         return res.status(400).json({ message: `Размер недоступен: ${product.name} (${item.size})` });
       }
-
-      const stockResult = await Product.updateOne(
-        {
-          _id: product._id,
-          sizes: { $elemMatch: { label: item.size, stock: { $gte: item.quantity } } },
-        },
-        { $inc: { "sizes.$.stock": -item.quantity } }
-      );
-
-      if (!stockResult.modifiedCount) {
-        await rollbackStock(appliedUpdates);
-        await Cart.findOneAndUpdate({ userId: req.user._id, items: [] }, { $set: { items: cart.items } });
-        return res.status(400).json({
-          message: `Недостаточно товара: ${product.name} (${item.size})`,
-        });
+      if (sizes[sizeIdx].stock < item.quantity) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: `Недостаточно товара: ${product.name} (${item.size})` });
       }
 
-      appliedUpdates.push({
-        productId: product._id,
-        size: item.size,
-        quantity: item.quantity,
-      });
+      sizes[sizeIdx].stock -= item.quantity;
+      await client.query(
+        "UPDATE products SET sizes = $1, updated_at = NOW() WHERE id = $2",
+        [JSON.stringify(sizes), product.id]
+      );
 
-      const price = product.price;
-      const lineTotal = price * item.quantity;
-      totalAmount += lineTotal;
-
-      items.push({
-        productId: product._id,
+      const price = Number(product.price);
+      totalAmount += price * item.quantity;
+      orderItems.push({
+        productId: product.id,
         name: product.name,
-        image: product.images?.[0] || "",
+        image: (product.images || [])[0] || "",
         size: item.size,
         quantity: item.quantity,
         price,
       });
     }
 
-    const order = await Order.create({
-      userId: req.user._id,
-      clientName: req.user.fullName,
-      clientPhone: req.user.phoneNumber,
-      items,
-      totalAmount,
-      clientComment: comment || "",
-    });
+    const { rows } = await client.query(
+      `INSERT INTO orders (user_id, client_name, client_phone, items, total_amount, client_comment)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [req.user._id, req.user.fullName, req.user.phoneNumber, JSON.stringify(orderItems), totalAmount, req.body.comment || ""]
+    );
 
-    res.status(201).json(order);
+    await client.query("COMMIT");
+    res.status(201).json(toOrder(rows[0]));
   } catch (error) {
-    try {
-      if (appliedUpdates.length) {
-        await rollbackStock(appliedUpdates);
-      }
-      if (cartSnapshot && cartSnapshot.length) {
-        await Cart.findOneAndUpdate(
-          { userId: req.user._id, items: [] },
-          { $set: { items: cartSnapshot } }
-        );
-      }
-    } catch (rollbackError) {
-      console.error("Order rollback failed:", rollbackError);
-    }
+    await client.query("ROLLBACK");
     res.status(500).json({ message: error.message });
+  } finally {
+    client.release();
   }
 };
 
 const getMyOrders = async (req, res) => {
   try {
-    if (req.user.role !== "client") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const orders = await Order.find({ userId: req.user._id }).sort({
-      createdAt: -1,
-    });
+    if (req.user.role !== "client") return res.status(403).json({ message: "Access denied" });
+    const orders = await Order.findByUserId(req.user._id);
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -136,15 +100,8 @@ const getMyOrders = async (req, res) => {
 
 const getAllOrders = async (req, res) => {
   try {
-    if (req.user.role !== "manager") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const { status } = req.query;
-    const filter = {};
-    if (status) filter.status = status;
-
-    const orders = await Order.find(filter).sort({ createdAt: -1 });
+    if (req.user.role !== "manager") return res.status(403).json({ message: "Access denied" });
+    const orders = await Order.findAll({ status: req.query.status });
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -153,42 +110,18 @@ const getAllOrders = async (req, res) => {
 
 const updateOrderStatus = async (req, res) => {
   try {
-    if (req.user.role !== "manager") {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
+    if (req.user.role !== "manager") return res.status(403).json({ message: "Access denied" });
     const { status, managerNote } = req.body;
-    const allowed = [
-      "new",
-      "contacted",
-      "paid",
-      "delivering",
-      "completed",
-      "canceled",
-    ];
-
-    if (status && !allowed.includes(status)) {
+    if (status && !Order.allowedStatuses.includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
-
     const order = await Order.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    if (status) order.status = status;
-    if (managerNote !== undefined) order.managerNote = managerNote;
-
-    await order.save();
-    res.json(order);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    const updated = await Order.update(req.params.id, { status, managerNote });
+    res.json(updated);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = {
-  createOrder,
-  getMyOrders,
-  getAllOrders,
-  updateOrderStatus,
-};
+module.exports = { createOrder, getMyOrders, getAllOrders, updateOrderStatus };
