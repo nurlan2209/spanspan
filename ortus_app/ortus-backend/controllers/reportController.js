@@ -1,13 +1,7 @@
 const Report = require("../models/Report");
 const { saveFile } = require("../utils/localUpload");
 const { slots, isLateAt } = require("../utils/reportTiming");
-
-const allowedMime = new Set([
-  "image/jpeg",
-  "image/png",
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
+const { normalizeReportMime } = require("../utils/reportMime");
 
 const createReport = async (req, res) => {
   try {
@@ -25,14 +19,15 @@ const createReport = async (req, res) => {
     const now = new Date();
     const attachments = [];
     for (const file of files) {
-      if (!allowedMime.has(file.mimetype)) return res.status(400).json({ message: "Unsupported file type" });
-      const resourceType = file.mimetype.startsWith("image/") ? "image" : "raw";
+      const fileType = normalizeReportMime(file);
+      if (!fileType) return res.status(400).json({ message: "Unsupported file type" });
+      const resourceType = fileType.startsWith("image/") ? "image" : "raw";
       const uploaded = saveFile(file.buffer, "reports", file.originalname);
       attachments.push({
         url: uploaded.secure_url,
         publicId: uploaded.public_id,
         resourceType,
-        fileType: file.mimetype,
+        fileType,
         originalName: file.originalname,
       });
     }

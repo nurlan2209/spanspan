@@ -7,22 +7,17 @@ const {
   getReports,
 } = require("../controllers/reportController");
 const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
+const { normalizeReportMime } = require("../utils/reportMime");
 
 const router = express.Router();
 
 const storage = multer.memoryStorage();
-const allowedReportMime = new Set([
-  "image/jpeg",
-  "image/png",
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-]);
 const maxAttachmentSizeBytes = 10 * 1024 * 1024;
 const upload = multer({
   storage,
   limits: { files: 4, fileSize: maxAttachmentSizeBytes },
   fileFilter: (req, file, cb) => {
-    if (allowedReportMime.has(file.mimetype)) {
+    if (normalizeReportMime(file)) {
       cb(null, true);
     } else {
       cb(new Error("Unsupported file type"));

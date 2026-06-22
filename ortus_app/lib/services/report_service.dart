@@ -1,11 +1,32 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../config/api_config.dart';
 import '../models/report_model.dart';
 import 'auth_service.dart';
 
 class ReportService {
+  MediaType _contentTypeFor(String path) {
+    final extension = path.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return MediaType('image', 'jpeg');
+      case 'png':
+        return MediaType('image', 'png');
+      case 'pdf':
+        return MediaType('application', 'pdf');
+      case 'docx':
+        return MediaType(
+          'application',
+          'vnd.openxmlformats-officedocument.wordprocessingml.document',
+        );
+      default:
+        return MediaType('application', 'octet-stream');
+    }
+  }
+
   Future<String?> createReport({
     required DateTime trainingDate,
     required String slot,
@@ -26,7 +47,11 @@ class ReportService {
 
     for (final file in attachments) {
       request.files.add(
-        await http.MultipartFile.fromPath('attachments', file.path),
+        await http.MultipartFile.fromPath(
+          'attachments',
+          file.path,
+          contentType: _contentTypeFor(file.path),
+        ),
       );
     }
 
