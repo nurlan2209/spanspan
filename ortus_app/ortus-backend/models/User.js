@@ -64,7 +64,7 @@ const User = {
     return toUser(rows[0]);
   },
 
-  async update(id, { fullName, phoneNumber, password, status }) {
+  async update(id, { fullName, phoneNumber, password, status, age }) {
     const sets = [];
     const params = [];
     if (fullName !== undefined) { params.push(fullName); sets.push(`full_name = $${params.length}`); }
@@ -75,6 +75,7 @@ const User = {
       sets.push(`password = $${params.length}`);
     }
     if (status !== undefined) { params.push(status); sets.push(`status = $${params.length}`); }
+    if (age !== undefined) { params.push(age); sets.push(`age = $${params.length}`); }
     if (!sets.length) return User.findById(id);
     params.push(id);
     const { rows } = await pool.query(

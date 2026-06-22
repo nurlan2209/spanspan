@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_button.dart';
+import 'client/edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -31,7 +32,23 @@ class ProfileScreen extends StatelessWidget {
             _buildInfoCard([
               _buildInfoRow(Icons.phone, 'Телефон', user.phoneNumber),
               _buildInfoRow(Icons.verified_user, 'Роль', _getRoleLabel(user.role)),
+              if (user.isClient && user.age != null)
+                _buildInfoRow(Icons.cake, 'Возраст', '${user.age} лет'),
             ]),
+            if (user.isClient) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Редактировать профиль'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             const Text(
               'Действия',

@@ -12,8 +12,8 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { fullName, phoneNumber, password } = req.body;
-    const user = await User.update(req.user._id, { fullName, phoneNumber, password });
+    const { fullName, phoneNumber, password, age } = req.body;
+    const user = await User.update(req.user._id, { fullName, phoneNumber, password, age: age != null ? parseInt(age) : undefined });
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   } catch (error) {
