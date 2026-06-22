@@ -6,14 +6,14 @@ import '../models/report_model.dart';
 import 'auth_service.dart';
 
 class ReportService {
-  Future<bool> createReport({
+  Future<String?> createReport({
     required DateTime trainingDate,
     required String slot,
     required String comment,
     required List<File> attachments,
   }) async {
     final token = await AuthService().getToken();
-    if (token == null) return false;
+    if (token == null) return 'Не авторизован';
 
     final request = http.MultipartRequest(
       'POST',
@@ -31,7 +31,13 @@ class ReportService {
     }
 
     final response = await http.Response.fromStream(await request.send());
-    return response.statusCode == 201;
+    if (response.statusCode == 201) return null;
+    try {
+      final body = json.decode(response.body);
+      return body['message']?.toString() ?? 'Ошибка отправки';
+    } catch (_) {
+      return 'Ошибка отправки (${response.statusCode})';
+    }
   }
 
   Future<List<ReportModel>> getMyReports() async {

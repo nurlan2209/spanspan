@@ -1,6 +1,6 @@
 const Report = require("../models/Report");
 const { saveFile } = require("../utils/localUpload");
-const { slots, canSubmitAt, isLateAt } = require("../utils/reportTiming");
+const { slots, isLateAt } = require("../utils/reportTiming");
 
 const allowedMime = new Set([
   "image/jpeg",
@@ -23,10 +23,6 @@ const createReport = async (req, res) => {
     if (files.length > 4) return res.status(400).json({ message: "Максимум 4 вложения" });
 
     const now = new Date();
-    if (!canSubmitAt(dateValue, slot, now)) {
-      return res.status(400).json({ message: "Отправка доступна за 60 минут до тренировки" });
-    }
-
     const attachments = [];
     for (const file of files) {
       if (!allowedMime.has(file.mimetype)) return res.status(400).json({ message: "Unsupported file type" });

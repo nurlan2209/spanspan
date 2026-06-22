@@ -340,7 +340,7 @@ class _TrainerReportsScreenState extends State<TrainerReportsScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    final success = await ReportService().createReport(
+    final error = await ReportService().createReport(
       trainingDate: _selectedDate,
       slot: _selectedSlot,
       comment: _commentController.text.trim(),
@@ -349,7 +349,7 @@ class _TrainerReportsScreenState extends State<TrainerReportsScreen> {
     setState(() => _isSubmitting = false);
 
     if (!mounted) return;
-    if (success) {
+    if (error == null) {
       _attachments.clear();
       _commentController.clear();
       _loadReports();
@@ -361,7 +361,7 @@ class _TrainerReportsScreenState extends State<TrainerReportsScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось отправить отчёт')),
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
       );
     }
   }
