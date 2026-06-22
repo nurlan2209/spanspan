@@ -6,7 +6,7 @@ const {
   deleteReport,
   getReports,
 } = require("../controllers/reportController");
-const { protect } = require("../middlewares/authMiddleware");
+const { protect, authorizeRoles } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -30,9 +30,9 @@ const upload = multer({
   },
 });
 
-router.post("/", protect, upload.array("attachments", 4), createReport);
-router.get("/my", protect, getMyReports);
-router.get("/", protect, getReports);
-router.delete("/:id", protect, deleteReport);
+router.post("/", protect, authorizeRoles("trainer"), upload.array("attachments", 4), createReport);
+router.get("/my", protect, authorizeRoles("trainer"), getMyReports);
+router.get("/", protect, authorizeRoles("manager", "director"), getReports);
+router.delete("/:id", protect, authorizeRoles("trainer"), deleteReport);
 
 module.exports = router;

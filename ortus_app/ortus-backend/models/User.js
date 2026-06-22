@@ -9,6 +9,7 @@ const toUser = (row, withPassword = false) => {
     fullName: row.full_name,
     role: row.role,
     status: row.status,
+    birthDate: row.birth_date ?? null,
     createdAt: row.created_at,
   };
   if (withPassword) u.password = row.password;
@@ -53,12 +54,12 @@ const User = {
     return rows.map((r) => toUser(r));
   },
 
-  async create({ phoneNumber, fullName, password, role = "client", status = "active" }) {
+  async create({ phoneNumber, fullName, password, birthDate, role = "client", status = "active" }) {
     const hashed = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
-      `INSERT INTO users (phone_number, full_name, password, role, status)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [phoneNumber, fullName, hashed, role, status]
+      `INSERT INTO users (phone_number, full_name, password, birth_date, role, status)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [phoneNumber, fullName, hashed, birthDate ?? null, role, status]
     );
     return toUser(rows[0]);
   },

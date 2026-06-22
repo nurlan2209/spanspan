@@ -9,8 +9,11 @@ import '../screens/client/orders_screen.dart';
 import '../screens/manager/manager_orders_screen.dart';
 import '../screens/manager/manager_products_screen.dart';
 import '../screens/trainer/trainer_reports_screen.dart';
+import '../screens/trainer/trainer_groups_screen.dart';
 import '../screens/director/staff_management_screen.dart';
 import '../screens/common/reports_overview_screen.dart';
+import '../screens/client/groups_list_screen.dart';
+import '../screens/client/my_enrollments_screen.dart';
 import '../utils/constants.dart';
 
 class AppNavigator extends StatefulWidget {
@@ -74,6 +77,8 @@ class _AppNavigatorState extends State<AppNavigator> {
     if (user.isClient) {
       return [
         _TabItem('Магазин', Icons.storefront, const ShopScreen()),
+        _TabItem('Группы', Icons.sports_martial_arts, const GroupsListScreen()),
+        _TabItem('Мои записи', Icons.event_available, const MyEnrollmentsScreen()),
         _TabItem('Заказы', Icons.receipt_long, const ClientOrdersScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];
@@ -90,6 +95,7 @@ class _AppNavigatorState extends State<AppNavigator> {
 
     if (user.isTrainer) {
       return [
+        _TabItem('Группы', Icons.sports_martial_arts, const TrainerGroupsScreen()),
         _TabItem('Отчёты', Icons.fact_check, const TrainerReportsScreen()),
         _TabItem('Профиль', Icons.person, _profileScreen()),
       ];

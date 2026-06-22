@@ -11,8 +11,6 @@ const allowedMime = new Set([
 
 const createReport = async (req, res) => {
   try {
-    if (req.user.role !== "trainer") return res.status(403).json({ message: "Access denied" });
-
     const { trainingDate, slot, comment } = req.body;
     if (!trainingDate || !slot) return res.status(400).json({ message: "Дата и слот обязательны" });
     if (!slots.includes(slot)) return res.status(400).json({ message: "Invalid slot" });
@@ -59,7 +57,6 @@ const createReport = async (req, res) => {
 
 const getMyReports = async (req, res) => {
   try {
-    if (req.user.role !== "trainer") return res.status(403).json({ message: "Access denied" });
     const reports = await Report.findByTrainerId(req.user._id);
     res.json(reports);
   } catch (error) {
@@ -69,7 +66,6 @@ const getMyReports = async (req, res) => {
 
 const deleteReport = async (req, res) => {
   try {
-    if (req.user.role !== "trainer") return res.status(403).json({ message: "Access denied" });
     const report = await Report.findById(req.params.id);
     if (!report) return res.status(404).json({ message: "Report not found" });
     if (report.trainerId !== req.user._id) return res.status(403).json({ message: "Access denied" });
@@ -82,7 +78,6 @@ const deleteReport = async (req, res) => {
 
 const getReports = async (req, res) => {
   try {
-    if (!["manager", "director"].includes(req.user.role)) return res.status(403).json({ message: "Access denied" });
     const { dateFrom, dateTo, trainerId, isLate } = req.query;
     const filter = {};
     if (trainerId) filter.trainerId = trainerId;

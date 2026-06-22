@@ -67,3 +67,30 @@ CREATE TABLE IF NOT EXISTS reports (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;
+
+DO $$ BEGIN
+  CREATE TYPE group_status AS ENUM ('recruiting', 'confirmed', 'cancelled', 'completed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE TABLE IF NOT EXISTS groups (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title            VARCHAR(255)  NOT NULL,
+  description      TEXT          NOT NULL DEFAULT '',
+  trainer_id       UUID          NOT NULL REFERENCES users(id),
+  scheduled_at     TIMESTAMPTZ   NOT NULL,
+  max_participants INTEGER       NOT NULL DEFAULT 20,
+  age_min          INTEGER       NOT NULL,
+  age_max          INTEGER       NOT NULL,
+  status           group_status  NOT NULL DEFAULT 'recruiting',
+  created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS group_enrollments (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id    UUID        NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  client_id   UUID        NOT NULL REFERENCES users(id),
+  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(group_id, client_id)
+);

@@ -4,9 +4,9 @@ services:
     container_name: ortus-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ortus
-      POSTGRES_USER: ortus
-      POSTGRES_PASSWORD: ortus_secret
+      POSTGRES_DB: ${POSTGRES_DB:-ortus}
+      POSTGRES_USER: ${POSTGRES_USER:-ortus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
