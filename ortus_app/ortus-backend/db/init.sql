@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS reports (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date DATE;
+ALTER TABLE users DROP COLUMN IF EXISTS birth_date;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS age INTEGER;
 
 DO $$ BEGIN
   CREATE TYPE group_status AS ENUM ('recruiting', 'confirmed', 'cancelled', 'completed');

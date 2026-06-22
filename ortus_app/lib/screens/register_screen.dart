@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
@@ -17,19 +17,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  DateTime? _birthDate;
+  final _ageController = TextEditingController();
   bool _isLoading = false;
-
-  Future<void> _pickBirthDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime(2000),
-      firstDate: DateTime(1930),
-      lastDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
-      helpText: 'Дата рождения',
-    );
-    if (picked != null) setState(() => _birthDate = picked);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,26 +68,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         v != _passwordController.text ? 'Пароли не совпадают' : null,
                   ),
                   const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: _pickBirthDate,
-                    child: AbsorbPointer(
-                      child: TextFormField(
-                        decoration: InputDecoration(
-                          labelText: 'Дата рождения',
-                          suffixIcon: const Icon(Icons.calendar_today, size: 18),
-                          hintText: _birthDate == null
-                              ? 'Выберите дату'
-                              : DateFormat('dd.MM.yyyy').format(_birthDate!),
-                        ),
-                        controller: TextEditingController(
-                          text: _birthDate == null
-                              ? ''
-                              : DateFormat('dd.MM.yyyy').format(_birthDate!),
-                        ),
-                        validator: (_) =>
-                            _birthDate == null ? 'Укажите дату рождения' : null,
-                      ),
+                  TextFormField(
+                    controller: _ageController,
+                    decoration: const InputDecoration(
+                      labelText: 'Возраст',
+                      suffixText: 'лет',
                     ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) {
+                      final n = int.tryParse(v ?? '');
+                      if (n == null || n < 1 || n > 120) return 'Введите возраст';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 24),
                   if (_isLoading)
@@ -140,8 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'phoneNumber': _phoneController.text,
         'fullName': _nameController.text,
         'password': _passwordController.text,
-        if (_birthDate != null)
-          'birthDate': DateFormat('yyyy-MM-dd').format(_birthDate!),
+        'age': int.parse(_ageController.text),
       });
 
       setState(() => _isLoading = false);
@@ -165,6 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _nameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 }

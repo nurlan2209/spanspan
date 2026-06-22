@@ -6,7 +6,7 @@ class UserData {
   final String fullName;
   final String role;
   final String? status;
-  final DateTime? birthDate;
+  final int? age;
   final DateTime? createdAt;
 
   UserData({
@@ -15,20 +15,9 @@ class UserData {
     required this.fullName,
     required this.role,
     this.status,
-    this.birthDate,
+    this.age,
     this.createdAt,
   });
-
-  int? get age {
-    if (birthDate == null) return null;
-    final today = DateTime.now();
-    int a = today.year - birthDate!.year;
-    if (today.month < birthDate!.month ||
-        (today.month == birthDate!.month && today.day < birthDate!.day)) {
-      a--;
-    }
-    return a;
-  }
 
   factory UserData.fromJson(Map<String, dynamic> json) {
     debugPrint('🟢🟢🟢 UserData.fromJson ВЫЗВАН 🟢🟢🟢');
@@ -39,9 +28,7 @@ class UserData {
       fullName: json['fullName']?.toString() ?? '',
       role: json['role']?.toString() ?? 'client',
       status: json['status']?.toString(),
-      birthDate: json['birthDate'] != null
-          ? DateTime.tryParse(json['birthDate'].toString())
-          : null,
+      age: json['age'] != null ? (json['age'] as num).toInt() : null,
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
     );
   }

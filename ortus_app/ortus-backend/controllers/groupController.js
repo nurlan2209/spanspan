@@ -1,15 +1,9 @@
 const Group = require("../models/Group");
 
-const calcAge = (birthDate) => {
-  if (!birthDate) return null;
-  return new Date().getFullYear() - new Date(birthDate).getFullYear();
-};
-
 // GET /api/groups — список подходящих групп (клиент)
 const listGroups = async (req, res) => {
   try {
-    const age = calcAge(req.user.birthDate);
-    const groups = await Group.findAll({ clientAge: age });
+    const groups = await Group.findAll({ clientAge: req.user.age ?? null });
     res.json(groups);
   } catch (e) {
     res.status(500).json({ message: e.message });

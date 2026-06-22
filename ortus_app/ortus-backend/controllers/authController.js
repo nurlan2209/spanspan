@@ -3,14 +3,14 @@ const generateToken = require("../utils/generateToken");
 
 const register = async (req, res) => {
   try {
-    const { phoneNumber, fullName, password, birthDate } = req.body;
+    const { phoneNumber, fullName, password, age } = req.body;
     if (!phoneNumber || !fullName || !password) {
       return res.status(400).json({ message: "Пожалуйста, заполните все обязательные поля." });
     }
     if (await User.findByPhone(phoneNumber)) {
       return res.status(400).json({ message: "Пользователь с таким номером телефона уже существует." });
     }
-    const user = await User.create({ phoneNumber, fullName, password, birthDate: birthDate ?? null, role: "client" });
+    const user = await User.create({ phoneNumber, fullName, password, age: age ? parseInt(age) : null, role: "client" });
     const token = generateToken(user._id);
     res.status(201).json({ user, token });
   } catch (error) {
