@@ -4,7 +4,8 @@ class GroupModel {
   final String description;
   final String trainerId;
   final String? trainerName;
-  final DateTime scheduledAt;
+  final List<int> scheduleDays;
+  final String scheduleTime;
   final int maxParticipants;
   final int ageMin;
   final int ageMax;
@@ -18,7 +19,8 @@ class GroupModel {
     required this.description,
     required this.trainerId,
     this.trainerName,
-    required this.scheduledAt,
+    required this.scheduleDays,
+    required this.scheduleTime,
     required this.maxParticipants,
     required this.ageMin,
     required this.ageMax,
@@ -34,7 +36,10 @@ class GroupModel {
       description: json['description']?.toString() ?? '',
       trainerId: json['trainerId']?.toString() ?? '',
       trainerName: json['trainerName']?.toString(),
-      scheduledAt: DateTime.tryParse(json['scheduledAt']?.toString() ?? '') ?? DateTime.now(),
+      scheduleDays: (json['scheduleDays'] as List<dynamic>? ?? [])
+          .map((e) => (e as num).toInt())
+          .toList(),
+      scheduleTime: json['scheduleTime']?.toString() ?? '',
       maxParticipants: json['maxParticipants'] as int? ?? 20,
       ageMin: json['ageMin'] as int? ?? 0,
       ageMax: json['ageMax'] as int? ?? 99,
@@ -49,4 +54,14 @@ class GroupModel {
   bool get isRecruiting => status == 'recruiting';
   bool get isConfirmed => status == 'confirmed';
   bool get isCancelled => status == 'cancelled';
+
+  // 1=Пн ... 7=Вс
+  static const _dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+  String get scheduleLabel {
+    final days = (scheduleDays.toList()..sort())
+        .map((d) => _dayNames[(d - 1).clamp(0, 6)])
+        .join(', ');
+    return '$days • $scheduleTime';
+  }
 }

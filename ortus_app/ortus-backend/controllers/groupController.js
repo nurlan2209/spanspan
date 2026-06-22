@@ -34,8 +34,8 @@ const trainerGroups = async (req, res) => {
 // POST /api/groups — создать группу (тренер)
 const createGroup = async (req, res) => {
   try {
-    const { title, description, scheduledAt, maxParticipants, ageMin, ageMax } = req.body;
-    if (!title || !scheduledAt || ageMin == null || ageMax == null) {
+    const { title, description, scheduleDays, scheduleTime, maxParticipants, ageMin, ageMax } = req.body;
+    if (!title || !scheduleTime || !Array.isArray(scheduleDays) || scheduleDays.length === 0 || ageMin == null || ageMax == null) {
       return res.status(400).json({ message: "Заполните все обязательные поля" });
     }
     if (ageMin > ageMax) {
@@ -45,7 +45,8 @@ const createGroup = async (req, res) => {
       title,
       description,
       trainerId: req.user._id,
-      scheduledAt,
+      scheduleDays,
+      scheduleTime,
       maxParticipants: maxParticipants ?? 20,
       ageMin,
       ageMax,

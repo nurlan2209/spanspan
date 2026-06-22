@@ -79,13 +79,18 @@ CREATE TABLE IF NOT EXISTS groups (
   title            VARCHAR(255)  NOT NULL,
   description      TEXT          NOT NULL DEFAULT '',
   trainer_id       UUID          NOT NULL REFERENCES users(id),
-  scheduled_at     TIMESTAMPTZ   NOT NULL,
+  schedule_days    INTEGER[]     NOT NULL DEFAULT '{}',
+  schedule_time    VARCHAR(5)    NOT NULL DEFAULT '10:00',
   max_participants INTEGER       NOT NULL DEFAULT 20,
   age_min          INTEGER       NOT NULL,
   age_max          INTEGER       NOT NULL,
   status           group_status  NOT NULL DEFAULT 'recruiting',
   created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE groups DROP COLUMN IF EXISTS scheduled_at;
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS schedule_days INTEGER[] NOT NULL DEFAULT '{}';
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS schedule_time VARCHAR(5) NOT NULL DEFAULT '10:00';
 
 CREATE TABLE IF NOT EXISTS group_enrollments (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

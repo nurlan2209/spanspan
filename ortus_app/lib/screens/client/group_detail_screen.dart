@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/group_model.dart';
 import '../../providers/group_provider.dart';
@@ -25,11 +24,7 @@ class GroupDetailScreen extends StatelessWidget {
                   children: [
                     _InfoRow(Icons.person, 'Тренер', group.trainerName ?? 'Не указан'),
                     const Divider(),
-                    _InfoRow(
-                      Icons.calendar_today,
-                      'Дата',
-                      DateFormat('dd MMMM yyyy, HH:mm', 'ru').format(group.scheduledAt.toLocal()),
-                    ),
+                    _InfoRow(Icons.calendar_today, 'Расписание', group.scheduleLabel),
                     const Divider(),
                     _InfoRow(Icons.cake, 'Возраст', '${group.ageMin}–${group.ageMax} лет'),
                     const Divider(),

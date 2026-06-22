@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/group_provider.dart';
 import '../../utils/constants.dart';
@@ -19,33 +18,28 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _maxController = TextEditingController(text: '20');
   final _ageMinController = TextEditingController();
   final _ageMaxController = TextEditingController();
-  DateTime? _scheduledAt;
+
+  final _dayLabels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  final Set<int> _selectedDays = {};
+  TimeOfDay _scheduleTime = const TimeOfDay(hour: 18, minute: 0);
   bool _loading = false;
 
-  Future<void> _pickDateTime() async {
-    final date = await showDatePicker(
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
       context: context,
-      initialDate: DateTime.now().add(const Duration(days: 1)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      helpText: 'Дата тренировки',
+      initialTime: _scheduleTime,
     );
-    if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 10, minute: 0),
-    );
-    if (time == null) return;
-    setState(() {
-      _scheduledAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    });
+    if (picked != null) setState(() => _scheduleTime = picked);
   }
+
+  String get _timeLabel =>
+      '${_scheduleTime.hour.toString().padLeft(2, '0')}:${_scheduleTime.minute.toString().padLeft(2, '0')}';
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_scheduledAt == null) {
+    if (_selectedDays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Выберите дату и время'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Выберите хотя бы один день'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -53,7 +47,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     final err = await context.read<GroupProvider>().createGroup({
       'title': _titleController.text.trim(),
       'description': _descController.text.trim(),
-      'scheduledAt': _scheduledAt!.toUtc().toIso8601String(),
+      'scheduleDays': _selectedDays.toList()..sort(),
+      'scheduleTime': _timeLabel,
       'maxParticipants': int.parse(_maxController.text),
       'ageMin': int.parse(_ageMinController.text),
       'ageMax': int.parse(_ageMaxController.text),
@@ -109,12 +104,39 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Дата и время', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const Text('Расписание', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 12),
+                      const Text('Дни недели *', style: TextStyle(color: AppColors.grey, fontSize: 13)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: List.generate(7, (i) {
+                          final day = i + 1;
+                          final selected = _selectedDays.contains(day);
+                          return FilterChip(
+                            label: Text(_dayLabels[i]),
+                            selected: selected,
+                            onSelected: (v) => setState(() {
+                              v ? _selectedDays.add(day) : _selectedDays.remove(day);
+                            }),
+                            selectedColor: AppColors.primary.withOpacity(0.15),
+                            checkmarkColor: AppColors.primary,
+                            labelStyle: TextStyle(
+                              color: selected ? AppColors.primary : AppColors.black,
+                              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                            side: BorderSide(
+                              color: selected ? AppColors.primary : AppColors.border,
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Время *', style: TextStyle(color: AppColors.grey, fontSize: 13)),
+                      const SizedBox(height: 8),
                       GestureDetector(
-                        onTap: _pickDateTime,
+                        onTap: _pickTime,
                         child: Container(
-                          width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
                             border: Border.all(color: AppColors.border),
@@ -123,16 +145,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.calendar_month, color: AppColors.grey, size: 18),
+                              const Icon(Icons.access_time, color: AppColors.grey, size: 18),
                               const SizedBox(width: 10),
-                              Text(
-                                _scheduledAt == null
-                                    ? 'Выберите дату и время *'
-                                    : DateFormat('dd.MM.yyyy, HH:mm').format(_scheduledAt!),
-                                style: TextStyle(
-                                  color: _scheduledAt == null ? AppColors.grey : AppColors.black,
-                                ),
-                              ),
+                              Text(_timeLabel, style: const TextStyle(fontSize: 16)),
                             ],
                           ),
                         ),
@@ -170,11 +185,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                               decoration: const InputDecoration(labelText: 'Возраст от *'),
                               keyboardType: TextInputType.number,
                               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              validator: (v) {
-                                final n = int.tryParse(v ?? '');
-                                if (n == null) return 'Введите возраст';
-                                return null;
-                              },
+                              validator: (v) => int.tryParse(v ?? '') == null ? 'Введите возраст' : null,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -207,7 +218,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     : ElevatedButton(
                         onPressed: _submit,
                         style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
-                        child: const Text('Создать группу', style: TextStyle(color: AppColors.white, fontSize: 16)),
+                        child: const Text('Создать группу',
+                            style: TextStyle(color: AppColors.white, fontSize: 16)),
                       ),
               ),
             ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/group_model.dart';
 import '../../providers/group_provider.dart';
@@ -137,7 +136,7 @@ class _EnrollmentCard extends StatelessWidget {
                   const Icon(Icons.calendar_today, size: 14, color: AppColors.grey),
                   const SizedBox(width: 4),
                   Text(
-                    DateFormat('dd.MM.yyyy, HH:mm').format(group.scheduledAt.toLocal()),
+                    group.scheduleLabel,
                     style: const TextStyle(color: AppColors.grey, fontSize: 13),
                   ),
                 ],

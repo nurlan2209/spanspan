@@ -8,7 +8,8 @@ const toGroup = (row) => {
     description: row.description,
     trainerId: row.trainer_id,
     trainerName: row.trainer_name ?? null,
-    scheduledAt: row.scheduled_at,
+    scheduleDays: row.schedule_days ?? [],
+    scheduleTime: row.schedule_time ?? '',
     maxParticipants: row.max_participants,
     ageMin: row.age_min,
     ageMax: row.age_max,
@@ -36,7 +37,7 @@ const Group = {
        LEFT JOIN group_enrollments e ON e.group_id = g.id
        WHERE g.status = 'recruiting' ${ageFilter}
        GROUP BY g.id, u.full_name
-       ORDER BY g.scheduled_at ASC`,
+       ORDER BY g.schedule_time ASC`,
       params
     );
     return rows.map(toGroup);
@@ -50,7 +51,7 @@ const Group = {
        LEFT JOIN group_enrollments e ON e.group_id = g.id
        WHERE g.trainer_id = $1
        GROUP BY g.id
-       ORDER BY g.scheduled_at DESC`,
+       ORDER BY g.created_at DESC`,
       [trainerId]
     );
     return rows.map(toGroup);
@@ -75,11 +76,11 @@ const Group = {
     return toGroup(rows[0]);
   },
 
-  async create({ title, description, trainerId, scheduledAt, maxParticipants, ageMin, ageMax }) {
+  async create({ title, description, trainerId, scheduleDays, scheduleTime, maxParticipants, ageMin, ageMax }) {
     const { rows } = await pool.query(
-      `INSERT INTO groups (title, description, trainer_id, scheduled_at, max_participants, age_min, age_max)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [title, description ?? "", trainerId, scheduledAt, maxParticipants, ageMin, ageMax]
+      `INSERT INTO groups (title, description, trainer_id, schedule_days, schedule_time, max_participants, age_min, age_max)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [title, description ?? "", trainerId, scheduleDays, scheduleTime, maxParticipants, ageMin, ageMax]
     );
     return toGroup(rows[0]);
   },
