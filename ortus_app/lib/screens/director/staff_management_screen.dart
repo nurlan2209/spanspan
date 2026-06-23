@@ -277,7 +277,7 @@ class _CreateStaffSheetState extends State<_CreateStaffSheet> {
     }
 
     setState(() => _isSaving = true);
-    final created = await UserService().createStaff(
+    final error = await UserService().createStaff(
       phoneNumber: _phoneController.text.trim(),
       fullName: _nameController.text.trim(),
       password: _passwordController.text.trim(),
@@ -286,11 +286,11 @@ class _CreateStaffSheetState extends State<_CreateStaffSheet> {
     if (!mounted) return;
     setState(() => _isSaving = false);
 
-    if (created != null) {
+    if (error == null) {
       Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Не удалось создать сотрудника')),
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
       );
     }
   }

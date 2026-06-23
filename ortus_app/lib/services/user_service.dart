@@ -60,14 +60,14 @@ class UserService {
     return [];
   }
 
-  Future<UserData?> createStaff({
+  Future<String?> createStaff({
     required String phoneNumber,
     required String fullName,
     required String password,
     required String role,
   }) async {
     final token = await AuthService().getToken();
-    if (token == null) return null;
+    if (token == null) return 'Не авторизован';
 
     final response = await http.post(
       Uri.parse('${ApiConfig.usersUrl}/staff'),
@@ -84,9 +84,15 @@ class UserService {
     );
 
     if (response.statusCode == 201) {
-      return UserData.fromJson(json.decode(response.body));
+      return null;
     }
-    return null;
+
+    try {
+      final body = json.decode(response.body);
+      return body['message']?.toString() ?? 'Не удалось создать сотрудника';
+    } catch (_) {
+      return 'Не удалось создать сотрудника (${response.statusCode})';
+    }
   }
 
   Future<UserData?> updateStaffStatus({
